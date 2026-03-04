@@ -706,6 +706,22 @@ tbody tr:last-child { border-bottom:none; }
         <p id="histSub">Tus registros de atenciones</p>
       </div>
 
+
+      <!-- CARGAR AÑO HISTÓRICO -->
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;padding:12px 16px;background:rgba(0,201,255,0.05);border:1px solid rgba(0,201,255,0.15);border-radius:12px;">
+        <span style="font-size:0.82rem;color:var(--gray);">📅 Cargar año histórico:</span>
+        <select id="selectAnioHistorial" style="padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:Outfit,sans-serif;font-size:0.85rem;outline:none;">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+        </select>
+        <button class="btn btn-secondary" onclick="cargarAnioSB(document.getElementById('selectAnioHistorial').value)" style="padding:7px 16px;font-size:0.82rem;">
+          ☁️ Cargar desde Supabase
+        </button>
+        <span style="color:var(--gray);font-size:0.78rem;">Registros en memoria: <strong id="totalEnMemoria" style="color:var(--accent);">0</strong></span>
+      </div>
+
       <!-- BOTÓN ENVIAR CORREO OUTLOOK -->
       <div class="card" style="margin-bottom:20px;border-color:rgba(0,120,212,0.35);background:rgba(0,120,212,0.05);">
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
@@ -1717,6 +1733,11 @@ function renderHistorial(data){
   count.textContent=`Mostrando ${data.length} registro(s)`;
 }
 
+function actualizarContadorMemoria() {
+  const el = document.getElementById('totalEnMemoria');
+  if(el) el.textContent = ATENCIONES.length.toLocaleString();
+}
+
 function filtrarHistorial(){
   const busq=document.getElementById('filtBusqueda').value.toLowerCase();
   const empresa=document.getElementById('filtEmpresa').value;
@@ -1967,6 +1988,235 @@ function limpiarConsulta(){
 }
 
 
+
+// ════════════════════════════════════════════════════════
+//  SUPABASE CONFIG
+// ════════════════════════════════════════════════════════
+const SUPABASE_URL = "https://gtmoewjbmxkluwpiurpo.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0bW9ld2pibXhrbHV3cGl1cnBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5NzYwNjIsImV4cCI6MjA1NjU1MjA2Mn0.8K9mP2xQvN4rL6wE1tY3uA5sD7fH0jB8cM3nV9pR2kW";
+
+async function sbFetch(path, options = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': options.prefer || 'return=representation',
+    ...options.headers
+  };
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Supabase error: ${res.status} - ${err}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+// GUARDAR atención en Supabase
+async function guardarEnSupabase(atencion) {
+  const row = {
+    fecha: atencion.fecha || null,
+    hora_inicio: atencion.horaInicio || null,
+    hora_fin: atencion.horaFin || null,
+    semana: atencion.semana || null,
+    mes: atencion.mes || null,
+    anio: atencion.anio || null,
+    dni: atencion.dni || null,
+    nombre: atencion.nombre || null,
+    sexo: atencion.sexo || null,
+    fecha_inicio_periodo: atencion.fechaInicioPeriodo || null,
+    empresa: atencion.empresa || null,
+    fundo: atencion.fundo || null,
+    cargo: atencion.cargo || null,
+    ruta: atencion.ruta || null,
+    cod: atencion.cod || null,
+    fundo_actual: atencion.fundoActual || null,
+    celular: atencion.celular || null,
+    supervisor: atencion.supervisor || null,
+    tipo_doc: atencion.tipoDoc || null,
+    fecha_inicio_doc: atencion.fechaInicioDoc || null,
+    fecha_term_doc: atencion.fechaTermDoc || null,
+    dias: atencion.dias || null,
+    resp_recepcion: atencion.respRecepcion || null,
+    obs: atencion.obs || null,
+    estado: atencion.estado || 'ACTIVO',
+    usuario: atencion.usuario || null,
+    usuario_original: atencion.usuarioOriginal || null,
+    importado: atencion.importado || false
+  };
+  // Limpiar nulls de fechas vacías
+  if (!row.fecha) delete row.fecha;
+  if (!row.fecha_inicio_periodo) delete row.fecha_inicio_periodo;
+  if (!row.fecha_inicio_doc) delete row.fecha_inicio_doc;
+  if (!row.fecha_term_doc) delete row.fecha_term_doc;
+
+  const data = await sbFetch('atenciones', {
+    method: 'POST',
+    body: JSON.stringify(row)
+  });
+  return data[0];
+}
+
+// CARGAR atenciones desde Supabase al iniciar
+async function cargarAtencionesSB() {
+  try {
+    // Cargar solo el año actual del usuario logueado — mucho más rápido
+    const anioActual = new Date().getFullYear();
+    const filtroUsuario = session.admin ? '' : `&usuario=eq.${session.usuario}`;
+    const filtroAnio = `&anio=eq.${anioActual}`;
+    showToast(`⏳ Cargando registros ${anioActual}...`, 'info', 2000);
+
+    let todas = [];
+    let offset = 0;
+    const limite = 1000;
+    while(true) {
+      const bloque = await sbFetch(
+        `atenciones?select=*&order=fecha.desc&limit=${limite}&offset=${offset}${filtroAnio}${filtroUsuario}`, {}
+      );
+      if (!bloque || bloque.length === 0) break;
+      todas = todas.concat(bloque);
+      if (bloque.length < limite) break;
+      offset += limite;
+    }
+    // Mapear columnas BD → formato sistema
+    ATENCIONES = mapearDesideSB(todas);
+    showToast(`✅ ${ATENCIONES.length.toLocaleString()} registros cargados desde Supabase`, 'success', 4000);
+    renderDashboard();
+    filtrarHistorial();
+  } catch(e) {
+    console.error('Error cargando Supabase:', e);
+    showToast('⚠️ Sin conexión a Supabase — usando datos locales', 'warn', 5000);
+  }
+}
+
+
+// Cargar registros de un año específico desde Supabase
+async function cargarAnioSB(anio) {
+  try {
+    const filtroUsuario = session.admin ? '' : `&usuario=eq.${session.usuario}`;
+    showToast(`⏳ Cargando registros ${anio}...`, 'info', 2000);
+    let todas = [];
+    let offset = 0;
+    while(true) {
+      const bloque = await sbFetch(
+        `atenciones?select=*&order=fecha.desc&limit=1000&offset=${offset}&anio=eq.${anio}${filtroUsuario}`, {}
+      );
+      if (!bloque || bloque.length === 0) break;
+      todas = todas.concat(bloque);
+      if (bloque.length < 1000) break;
+      offset += 1000;
+    }
+    const nuevos = mapearDesideSB(todas);
+    // Quitar los del mismo año que ya estaban y agregar los nuevos
+    ATENCIONES = ATENCIONES.filter(a => String(a.anio) !== String(anio));
+    ATENCIONES = ATENCIONES.concat(nuevos);
+    showToast(`✅ ${nuevos.length.toLocaleString()} registros de ${anio} cargados`, 'success', 3000);
+    renderDashboard();
+    filtrarHistorial();
+  } catch(e) {
+    showToast('Error cargando año: ' + e.message, 'error');
+  }
+}
+
+// Mapear filas de Supabase al formato del sistema
+function mapearDesideSB(rows) {
+  return rows.map(r => ({
+    id: r.id,
+    fecha: r.fecha || '',
+    horaInicio: r.hora_inicio || '',
+    horaFin: r.hora_fin || '',
+    semana: r.semana || 0,
+    mes: r.mes || '',
+    anio: r.anio || 0,
+    dni: r.dni || '',
+    nombre: r.nombre || '',
+    sexo: r.sexo || '',
+    fechaInicioPeriodo: r.fecha_inicio_periodo || '',
+    empresa: r.empresa || '',
+    fundo: r.fundo || '',
+    cargo: r.cargo || '',
+    ruta: r.ruta || '',
+    cod: r.cod || '',
+    fundoActual: r.fundo_actual || '',
+    celular: r.celular || '',
+    supervisor: r.supervisor || '',
+    tipoDoc: r.tipo_doc || '',
+    fechaInicioDoc: r.fecha_inicio_doc || '',
+    fechaTermDoc: r.fecha_term_doc || '',
+    dias: r.dias || '',
+    respRecepcion: r.resp_recepcion || '',
+    obs: r.obs || '',
+    estado: r.estado || 'ACTIVO',
+    usuario: r.usuario || '',
+    usuarioOriginal: r.usuario_original || '',
+    importado: r.importado || false
+  }));
+}
+
+// IMPORTAR MASIVO a Supabase (por lotes de 500)
+async function importarLoteSupabase(registros) {
+  const LOTE = 500;
+  let insertados = 0;
+  for(let i = 0; i < registros.length; i += LOTE) {
+    const lote = registros.slice(i, i + LOTE).map(a => ({
+      fecha: a.fecha || null,
+      hora_inicio: a.horaInicio || null,
+      hora_fin: a.horaFin || null,
+      semana: a.semana || null,
+      mes: a.mes || null,
+      anio: a.anio || null,
+      dni: a.dni || null,
+      nombre: a.nombre || null,
+      sexo: a.sexo || null,
+      fecha_inicio_periodo: a.fechaInicioPeriodo || null,
+      empresa: a.empresa || null,
+      fundo: a.fundo || null,
+      cargo: a.cargo || null,
+      ruta: a.ruta || null,
+      cod: a.cod || null,
+      fundo_actual: a.fundoActual || null,
+      celular: a.celular || null,
+      supervisor: a.supervisor || null,
+      tipo_doc: a.tipoDoc || null,
+      fecha_inicio_doc: a.fechaInicioDoc || null,
+      fecha_term_doc: a.fechaTermDoc || null,
+      dias: a.dias || null,
+      resp_recepcion: a.respRecepcion || null,
+      obs: a.obs || null,
+      estado: a.estado || 'IMPORTADO',
+      usuario: a.usuario || null,
+      usuario_original: a.usuarioOriginal || null,
+      importado: true
+    })).map(r => {
+      // Limpiar fechas vacías
+      if (!r.fecha) delete r.fecha;
+      if (!r.fecha_inicio_periodo) delete r.fecha_inicio_periodo;
+      if (!r.fecha_inicio_doc) delete r.fecha_inicio_doc;
+      if (!r.fecha_term_doc) delete r.fecha_term_doc;
+      return r;
+    });
+
+    await sbFetch('atenciones', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(lote)
+    });
+    insertados += lote.length;
+    const pct = Math.round((insertados / registros.length) * 100);
+    mostrarProgreso(`Guardando en Supabase... ${insertados.toLocaleString()} de ${registros.length.toLocaleString()}`, pct);
+  }
+  return insertados;
+}
+
+// ELIMINAR registro de Supabase
+async function eliminarDeSB(id) {
+  await sbFetch(`atenciones?id=eq.${id}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal'
+  });
+}
+
 // ════════════════════════════════════════════════════════
 //  MÓDULO IMPORTACIÓN HISTÓRICA
 // ════════════════════════════════════════════════════════
@@ -2200,6 +2450,10 @@ function ejecutarImportacion() {
   // Actualizar contador
   document.getElementById('statImportados').textContent = datosImportados.length.toLocaleString();
 
+  // Subir a Supabase en paralelo
+  importarLoteSupabase(nuevos).then(n => {
+    showToast(`☁️ ${n.toLocaleString()} registros guardados en Supabase`, 'success', 5000);
+  }).catch(e => console.warn('Error subiendo a Supabase:', e));
   showToast(`✅ ${nuevos.toLocaleString ? nuevos.length.toLocaleString() : nuevos.length} registros importados${duplicados > 0 ? ` (${duplicados} duplicados omitidos)` : ''}`, 'success', 6000);
   
   document.getElementById('btnLimpiarImport').style.display = '';
@@ -2576,3 +2830,4 @@ document.getElementById('modalCorreo').addEventListener('click', function(e){
 </script>
 </body>
 </html>
+
