@@ -1,0 +1,2773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema RL – Atenciones Verfrut / Rapel</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --navy: #0a0f3d;
+  --navy2: #0d1452;
+  --blue: #1a2aad;
+  --accent: #00c9ff;
+  --accent2: #0ef0a0;
+  --danger: #ff4b6e;
+  --warn: #ffb830;
+  --white: #f0f4ff;
+  --gray: #8892b0;
+  --card: rgba(255,255,255,0.05);
+  --border: rgba(0,201,255,0.15);
+  --glass: rgba(10,15,61,0.85);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--navy);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── BACKGROUND MESH ─── */
+body::before {
+  content:'';
+  position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(26,42,173,0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 80%, rgba(0,201,255,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(14,240,160,0.05) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+/* ─── SPLASH ─── */
+#splash {
+  position:fixed; inset:0; z-index:1000;
+  background: var(--navy);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:32px;
+}
+.splash-logo {
+  font-size:3rem; font-weight:800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  letter-spacing:-2px;
+}
+.splash-sub { color:var(--gray); font-size:0.9rem; letter-spacing:4px; text-transform:uppercase; }
+.splash-bar-wrap {
+  width:280px; height:4px; background:rgba(255,255,255,0.08);
+  border-radius:4px; overflow:hidden;
+}
+.splash-bar {
+  height:100%; width:0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius:4px;
+  transition: width 0.05s linear;
+  box-shadow: 0 0 12px rgba(0,201,255,0.6);
+}
+.splash-pct { font-family:'JetBrains Mono', monospace; color:var(--accent); font-size:0.85rem; }
+.splash-msg { color:var(--gray); font-size:0.8rem; min-height:20px; }
+
+/* ─── LOGIN ─── */
+#login-screen {
+  display:none; position:fixed; inset:0; z-index:900;
+  align-items:center; justify-content:center;
+  padding:20px;
+}
+.login-card {
+  background: rgba(13,20,82,0.9);
+  border: 1px solid var(--border);
+  border-radius:24px;
+  padding:48px 40px;
+  width:100%; max-width:420px;
+  backdrop-filter:blur(20px);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,201,255,0.1);
+  animation: slideUp 0.5s ease;
+}
+@keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+.login-logo {
+  text-align:center; margin-bottom:32px;
+}
+.login-logo h1 {
+  font-size:2rem; font-weight:800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.login-logo p { color:var(--gray); font-size:0.8rem; letter-spacing:3px; text-transform:uppercase; margin-top:4px; }
+
+.field-wrap { margin-bottom:20px; }
+.field-wrap label { display:block; color:var(--gray); font-size:0.8rem; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+.field-wrap input {
+  width:100%; padding:14px 18px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid var(--border);
+  border-radius:12px;
+  color:var(--white); font-family:'Outfit',sans-serif; font-size:0.95rem;
+  outline:none; transition:all 0.2s;
+}
+.field-wrap input:focus { border-color:var(--accent); background:rgba(0,201,255,0.06); box-shadow:0 0 0 3px rgba(0,201,255,0.1); }
+
+.btn-login {
+  width:100%; padding:15px;
+  background: linear-gradient(135deg, var(--blue), var(--accent));
+  border:none; border-radius:12px;
+  color:#fff; font-family:'Outfit',sans-serif; font-size:1rem; font-weight:600;
+  cursor:pointer; transition:all 0.2s; letter-spacing:0.5px;
+  box-shadow:0 8px 24px rgba(0,201,255,0.25);
+}
+.btn-login:hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(0,201,255,0.4); }
+.btn-login:active { transform:translateY(0); }
+
+.login-error {
+  margin-top:16px; padding:12px 16px;
+  background:rgba(255,75,110,0.12); border:1px solid rgba(255,75,110,0.3);
+  border-radius:10px; color:var(--danger); font-size:0.85rem; text-align:center;
+  display:none;
+}
+.intento-badge {
+  position:absolute; top:12px; right:12px;
+  background:rgba(255,75,110,0.15); color:var(--danger);
+  border-radius:20px; padding:4px 12px; font-size:0.75rem;
+}
+
+/* ─── APP SHELL ─── */
+#app {
+  display:none; position:relative; z-index:1;
+  min-height:100vh;
+}
+
+/* ─── TOP BAR ─── */
+.topbar {
+  position:sticky; top:0; z-index:100;
+  background: rgba(10,15,61,0.92); backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  display:flex; align-items:center; gap:16px; height:64px;
+}
+.topbar-logo {
+  font-size:1.2rem; font-weight:800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  white-space:nowrap;
+}
+.topbar-divider { width:1px; height:32px; background:var(--border); }
+.nav-tabs { display:flex; gap:4px; flex:1; overflow-x:auto; }
+.nav-tab {
+  padding:8px 16px; border-radius:10px;
+  color:var(--gray); font-size:0.85rem; font-weight:500;
+  cursor:pointer; transition:all 0.2s; white-space:nowrap;
+  border:none; background:transparent;
+}
+.nav-tab:hover { color:var(--white); background:rgba(255,255,255,0.06); }
+.nav-tab.active { color:var(--accent); background:rgba(0,201,255,0.1); }
+.topbar-user {
+  margin-left:auto; display:flex; align-items:center; gap:12px;
+}
+.user-chip {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,0.06); border:1px solid var(--border);
+  border-radius:40px; padding:6px 16px 6px 8px;
+}
+.user-avatar {
+  width:32px; height:32px; border-radius:50%;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:0.8rem;
+}
+.user-name { font-size:0.85rem; font-weight:500; }
+.user-role { font-size:0.72rem; color:var(--gray); }
+.btn-logout {
+  padding:8px 16px; border-radius:10px;
+  background:rgba(255,75,110,0.1); border:1px solid rgba(255,75,110,0.2);
+  color:var(--danger); font-size:0.8rem; cursor:pointer; transition:all 0.2s;
+}
+.btn-logout:hover { background:rgba(255,75,110,0.2); }
+
+/* ─── MAIN CONTENT ─── */
+.main { padding:28px 24px; max-width:1400px; margin:0 auto; }
+
+/* ─── SECTIONS ─── */
+.section { display:none; }
+.section.active { display:block; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ─── PAGE HEADER ─── */
+.page-header { margin-bottom:28px; }
+.page-header h2 { font-size:1.6rem; font-weight:700; }
+.page-header p { color:var(--gray); font-size:0.9rem; margin-top:4px; }
+
+/* ─── CARDS ─── */
+.card {
+  background: rgba(255,255,255,0.04);
+  border:1px solid var(--border);
+  border-radius:16px; padding:24px;
+  backdrop-filter:blur(10px);
+}
+.card-title {
+  font-size:0.75rem; font-weight:600;
+  letter-spacing:2px; text-transform:uppercase;
+  color:var(--gray); margin-bottom:8px;
+}
+
+/* ─── STATS GRID ─── */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+.stat-card {
+  background: rgba(255,255,255,0.04);
+  border:1px solid var(--border);
+  border-radius:16px; padding:20px 24px;
+  position:relative; overflow:hidden;
+  transition:all 0.2s;
+}
+.stat-card:hover { border-color:rgba(0,201,255,0.35); transform:translateY(-2px); }
+.stat-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+.stat-label { color:var(--gray); font-size:0.78rem; text-transform:uppercase; letter-spacing:1px; }
+.stat-num { font-size:2.2rem; font-weight:800; margin:6px 0 4px; line-height:1; }
+.stat-sub { color:var(--gray); font-size:0.78rem; }
+.stat-icon { position:absolute; right:20px; top:50%; transform:translateY(-50%); font-size:2rem; opacity:0.15; }
+
+/* ─── FORM GRID ─── */
+.form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+.form-group { display:flex; flex-direction:column; gap:8px; }
+.form-group label { color:var(--gray); font-size:0.78rem; text-transform:uppercase; letter-spacing:1px; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding:12px 16px;
+  background:rgba(255,255,255,0.05); border:1px solid var(--border);
+  border-radius:10px; color:var(--white);
+  font-family:'Outfit',sans-serif; font-size:0.9rem;
+  outline:none; transition:all 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color:var(--accent); background:rgba(0,201,255,0.05);
+  box-shadow:0 0 0 3px rgba(0,201,255,0.08);
+}
+.form-group input[readonly] { opacity:0.7; cursor:default; }
+.form-group select option { background:var(--navy2); }
+.form-group textarea { resize:vertical; min-height:80px; }
+
+.form-full { grid-column:1/-1; }
+
+/* ─── BUTTONS ─── */
+.btn {
+  padding:12px 24px; border-radius:10px;
+  font-family:'Outfit',sans-serif; font-size:0.9rem; font-weight:600;
+  cursor:pointer; transition:all 0.2s; border:none;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue), var(--accent));
+  color:#fff; box-shadow:0 6px 20px rgba(0,201,255,0.2);
+}
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,201,255,0.35); }
+.btn-secondary {
+  background:rgba(255,255,255,0.07); border:1px solid var(--border); color:var(--white);
+}
+.btn-secondary:hover { background:rgba(255,255,255,0.12); }
+.btn-danger { background:rgba(255,75,110,0.15); border:1px solid rgba(255,75,110,0.3); color:var(--danger); }
+.btn-danger:hover { background:rgba(255,75,110,0.25); }
+.btn-success { background:rgba(14,240,160,0.12); border:1px solid rgba(14,240,160,0.25); color:var(--accent2); }
+
+.btn-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:20px; align-items:center; }
+
+/* ─── ALERT REITERATIVO ─── */
+.alert-reiterativo {
+  padding:14px 18px; border-radius:12px; margin-bottom:16px;
+  display:none; animation:fadeIn 0.3s ease;
+}
+.alert-warn { background:rgba(255,184,48,0.1); border:1px solid rgba(255,184,48,0.3); color:var(--warn); }
+.alert-info { background:rgba(14,240,160,0.08); border:1px solid rgba(14,240,160,0.2); color:var(--accent2); }
+.alert-danger { background:rgba(255,75,110,0.1); border:1px solid rgba(255,75,110,0.3); color:var(--danger); }
+
+/* ─── TABLA ─── */
+.table-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--border); }
+table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+thead tr { background:rgba(0,201,255,0.07); }
+thead th { padding:12px 16px; text-align:left; color:var(--gray); font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; font-weight:600; white-space:nowrap; border-bottom:1px solid var(--border); }
+tbody tr { border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s; }
+tbody tr:hover { background:rgba(255,255,255,0.04); }
+tbody td { padding:12px 16px; color:var(--white); }
+tbody tr:last-child { border-bottom:none; }
+
+/* ─── BADGE ─── */
+.badge {
+  padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:600;
+  display:inline-block;
+}
+.badge-pendiente { background:rgba(255,184,48,0.15); color:var(--warn); }
+.badge-ok { background:rgba(14,240,160,0.12); color:var(--accent2); }
+
+/* ─── FILTROS ─── */
+.filter-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; align-items:flex-end; }
+.filter-bar .form-group { flex:1; min-width:160px; }
+
+/* ─── CHARTS ─── */
+.charts-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:20px; margin-top:20px; }
+.chart-card { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:16px; padding:24px; }
+.chart-card h3 { font-size:0.85rem; color:var(--gray); text-transform:uppercase; letter-spacing:1px; margin-bottom:20px; }
+.chart-wrap { position:relative; height:240px; }
+
+/* ─── PERIODO TABS ─── */
+.periodo-tabs { display:flex; gap:4px; background:rgba(255,255,255,0.05); border-radius:12px; padding:4px; width:fit-content; margin-bottom:20px; }
+.periodo-tab {
+  padding:8px 18px; border-radius:9px; border:none;
+  font-family:'Outfit',sans-serif; font-size:0.82rem; font-weight:500;
+  cursor:pointer; color:var(--gray); background:transparent; transition:all 0.2s;
+}
+.periodo-tab.active { background:var(--accent); color:var(--navy); font-weight:700; }
+
+/* ─── TOAST ─── */
+.toast {
+  position:fixed; bottom:24px; right:24px; z-index:9999;
+  padding:14px 20px; border-radius:12px; font-size:0.88rem; font-weight:500;
+  background:rgba(13,20,82,0.95); border:1px solid var(--border);
+  backdrop-filter:blur(20px); color:var(--white);
+  transform:translateY(80px); opacity:0;
+  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  max-width:340px;
+}
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.success { border-color:rgba(14,240,160,0.4); }
+.toast.error { border-color:rgba(255,75,110,0.4); }
+
+/* ─── EMPTY STATE ─── */
+.empty-state { text-align:center; padding:60px 20px; color:var(--gray); }
+.empty-state .emoji { font-size:3rem; margin-bottom:12px; }
+.empty-state p { font-size:0.9rem; }
+
+/* ─── ADMIN BADGE ─── */
+.admin-tag {
+  background: linear-gradient(135deg, rgba(255,184,48,0.2), rgba(255,184,48,0.05));
+  border:1px solid rgba(255,184,48,0.3);
+  color:var(--warn); font-size:0.72rem; padding:2px 10px; border-radius:20px;
+}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:640px) {
+  .topbar { padding:0 16px; height:56px; }
+  .main { padding:16px; }
+  .nav-tabs { display:none; }
+  .btn-row { flex-direction:column; }
+  .btn { width:100%; text-align:center; }
+  .stats-grid { grid-template-columns:1fr 1fr; }
+  .login-card { padding:32px 24px; }
+}
+
+/* ─── MOBILE BOTTOM NAV ─── */
+.mobile-nav {
+  display:none;
+  position:fixed; bottom:0; left:0; right:0; z-index:100;
+  background:rgba(10,15,61,0.97); backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  padding:8px 16px 16px;
+  gap:4px;
+}
+@media(max-width:640px) { .mobile-nav { display:flex; } }
+.mobile-nav-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+  padding:8px 4px; border-radius:10px; border:none; background:transparent;
+  color:var(--gray); font-family:'Outfit',sans-serif; font-size:0.65rem; cursor:pointer;
+  transition:all 0.2s;
+}
+.mobile-nav-btn.active { color:var(--accent); background:rgba(0,201,255,0.08); }
+.mobile-nav-btn .mni { font-size:1.3rem; }
+@media(max-width:640px) { .main { padding-bottom:90px; } }
+
+/* ─── DNI BUSCADOR STATUS ─── */
+.dni-status {
+  padding:10px 14px; border-radius:10px; font-size:0.82rem;
+  margin-top:8px; display:none;
+}
+.dni-found { background:rgba(14,240,160,0.1); border:1px solid rgba(14,240,160,0.25); color:var(--accent2); }
+.dni-notfound { background:rgba(255,184,48,0.1); border:1px solid rgba(255,184,48,0.25); color:var(--warn); }
+
+/* ─── SEPARADOR SECTION ─── */
+.section-sep { height:1px; background:var(--border); margin:24px 0; }
+
+/* scrollbar */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(0,201,255,0.2); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">SISTEMA RL</div>
+  <div class="splash-sub">Verfrut &amp; Rapel · Relaciones Laborales</div>
+  <div class="splash-bar-wrap"><div class="splash-bar" id="splashBar"></div></div>
+  <div class="splash-pct" id="splashPct">0%</div>
+  <div class="splash-msg" id="splashMsg">Inicializando entorno…</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;padding:20px;">
+  <div class="login-card" style="position:relative;">
+    <div class="intento-badge" id="intentoBadge" style="display:none;">Intento <span id="intentoNum">0</span>/3</div>
+    <div class="login-logo">
+      <h1>SISTEMA RL</h1>
+      <p>Verfrut &amp; Rapel · 2025</p>
+    </div>
+    <div class="field-wrap">
+      <label>Usuario</label>
+      <input type="text" id="inpUsuario" placeholder="ecastro" autocomplete="off">
+    </div>
+    <div class="field-wrap">
+      <label>Contraseña</label>
+      <input type="password" id="inpPass" placeholder="••••••••">
+    </div>
+    <button class="btn-login" id="btnLogin">Ingresar al Sistema</button>
+    <div class="login-error" id="loginError">Usuario o contraseña incorrectos.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">SISTEMA RL</div>
+    <div class="topbar-divider"></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showSection('dashboard')">📊 Dashboard</button>
+      <button class="nav-tab" onclick="showSection('registro')">📝 Registro</button>
+      <button class="nav-tab" onclick="showSection('historial')">📋 Historial</button>
+      <button class="nav-tab" onclick="showSection('consulta')">🔍 Consulta General</button>
+      <button class="nav-tab admin-only" onclick="showSection('importar')" style="display:none">📥 Importar Datos</button>
+      <button class="nav-tab admin-only" onclick="showSection('admin')" style="display:none">⚙️ Administración</button>
+    </div>
+    <div class="topbar-user">
+      <div class="user-chip">
+        <div class="user-avatar" id="topAvatar">JT</div>
+        <div>
+          <div class="user-name" id="topNombre">Usuario</div>
+          <div class="user-role" id="topCargo">Cargo</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ══════════════════════════════════════ DASHBOARD ══════════════════════════════════════ -->
+    <div id="section-dashboard" class="section active">
+      <div class="page-header">
+        <h2 id="dashTitle">Dashboard</h2>
+        <p id="dashSub">Resumen de tus atenciones registradas</p>
+      </div>
+
+      <!-- PERIODO TABS -->
+      <div class="periodo-tabs">
+        <button class="periodo-tab active" onclick="setPeriodo('dia',this)">Hoy</button>
+        <button class="periodo-tab" onclick="setPeriodo('semana',this)">Semana</button>
+        <button class="periodo-tab" onclick="setPeriodo('mes',this)">Mes</button>
+        <button class="periodo-tab" onclick="setPeriodo('anio',this)">Año</button>
+      </div>
+
+      <!-- STATS -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-label">Total Atenciones</div>
+          <div class="stat-num accent" id="statTotal" style="color:var(--accent)">0</div>
+          <div class="stat-sub" id="statPeriodo">en este período</div>
+          <div class="stat-icon">📋</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Rapel</div>
+          <div class="stat-num" id="statRapel" style="color:var(--accent2)">0</div>
+          <div class="stat-sub">registros empresa Rapel</div>
+          <div class="stat-icon">🌿</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Verfrut</div>
+          <div class="stat-num" id="statVerfrut" style="color:var(--warn)">0</div>
+          <div class="stat-sub">registros empresa Verfrut</div>
+          <div class="stat-icon">🍇</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Documentos únicos</div>
+          <div class="stat-num" id="statTipos" style="color:#a78bfa">0</div>
+          <div class="stat-sub">tipos de documento</div>
+          <div class="stat-icon">📄</div>
+        </div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>📑 Tipo de Documento</h3>
+          <div class="chart-wrap"><canvas id="chartTipo"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>👤 Responsable de Recepción</h3>
+          <div class="chart-wrap"><canvas id="chartResponsable"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>🏢 Por Empresa</h3>
+          <div class="chart-wrap"><canvas id="chartEmpresa"></canvas></div>
+        </div>
+        <div class="chart-card" id="chartTendenciaWrap">
+          <h3>📈 Tendencia del mes</h3>
+          <div class="chart-wrap"><canvas id="chartTendencia"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ADMIN: VISTA GLOBAL -->
+      <div id="adminGlobal" style="display:none; margin-top:28px;">
+        <div class="section-sep"></div>
+        <div class="page-header">
+          <h2>👑 Vista Global — Todos los usuarios</h2>
+          <p>Resumen de atenciones por supervisor</p>
+        </div>
+        <div class="stats-grid" id="adminStatsGrid"></div>
+        <div class="chart-card" style="margin-top:20px;">
+          <h3>🏆 Ranking de Supervisores</h3>
+          <div class="chart-wrap"><canvas id="chartRanking"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ REGISTRO ══════════════════════════════════════ -->
+    <div id="section-registro" class="section">
+      <div class="page-header">
+        <h2>📝 Registro de Atención</h2>
+        <p>Busca al trabajador por DNI y completa los datos de la atención</p>
+      </div>
+
+      <!-- BUSCADOR DNI -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">🔎 Búsqueda por DNI</div>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="form-group" style="flex:1;min-width:200px;">
+            <label>DNI del Trabajador</label>
+            <input type="text" id="inpDNI" placeholder="Ingresa el DNI (8 dígitos)" maxlength="8"
+              oninput="this.value=this.value.replace(/\D/,'')"
+              onkeydown="if(event.key==='Enter') buscarDNI()">
+          </div>
+          <button class="btn btn-primary" onclick="buscarDNI()" style="padding:12px 28px;">🔍 Buscar</button>
+          <button class="btn btn-secondary" onclick="limpiarFormulario()">🗑 Limpiar</button>
+        </div>
+        <div class="dni-status dni-found" id="dniFound">✅ Trabajador encontrado en base de datos</div>
+        <div class="dni-status dni-notfound" id="dniNotFound">⚠️ DNI no encontrado — puedes ingresar datos manualmente</div>
+      </div>
+
+      <!-- ALERTA REITERATIVO -->
+      <div class="alert-reiterativo alert-warn" id="alertReiterativo"></div>
+
+      <!-- FORMULARIO -->
+      <div class="card">
+        <div class="card-title">📋 Datos de la Atención</div>
+        <div class="form-grid" style="margin-top:16px;">
+
+          <!-- Fecha / hora auto -->
+          <div class="form-group">
+            <label>Fecha de Atención</label>
+            <input type="date" id="fFecha">
+          </div>
+          <div class="form-group">
+            <label>Hora Inicio</label>
+            <input type="time" id="fHoraInicio" readonly>
+          </div>
+          <div class="form-group">
+            <label>N° Semana</label>
+            <input type="text" id="fSemana" readonly>
+          </div>
+          <div class="form-group">
+            <label>Mes</label>
+            <input type="text" id="fMes" readonly>
+          </div>
+
+          <div class="section-sep form-full" style="margin:4px 0;"></div>
+
+          <!-- Datos trabajador (autocompletado) -->
+          <div class="form-group">
+            <label>DNI</label>
+            <input type="text" id="fDNI" readonly>
+          </div>
+          <div class="form-group" style="grid-column:span 2;">
+            <label>Nombre y Apellidos</label>
+            <input type="text" id="fNombre">
+          </div>
+          <div class="form-group">
+            <label>Sexo</label>
+            <input type="text" id="fSexo" readonly>
+          </div>
+          <div class="form-group">
+            <label>Empresa</label>
+            <input type="text" id="fEmpresa" readonly>
+          </div>
+          <div class="form-group">
+            <label>Fundo</label>
+            <input type="text" id="fFundo" readonly>
+          </div>
+          <div class="form-group">
+            <label>Cargo</label>
+            <input type="text" id="fCargo" readonly>
+          </div>
+          <div class="form-group">
+            <label>Fundo Actual</label>
+            <input type="text" id="fFundoActual">
+          </div>
+          <div class="form-group">
+            <label>N° Celular</label>
+            <input type="tel" id="fCelular" placeholder="999 999 999">
+          </div>
+          <div class="form-group">
+            <label>Años en empresa</label>
+            <input type="text" id="fAnianza" readonly>
+          </div>
+
+          <div class="section-sep form-full" style="margin:4px 0;"></div>
+
+          <!-- Atención -->
+          <div class="form-group">
+            <label>Supervisor Responsable</label>
+            <select id="fSupervisor">
+              <option value="">Seleccionar…</option>
+              <option>Elberth Castro</option>
+              <option>Muriel Mechato</option>
+              <option>Alex Zapata</option>
+              <option>Yhanelly Luzón</option>
+              <option>Sergio Viera</option>
+              <option>Pool Tamayo</option>
+              <option>Olga Vilela</option>
+              <option>Roberto Molero</option>
+              <option>Marco Panaqué</option>
+              <option>Flor Pulache</option>
+              <option>Socorro Miranda</option>
+              <option>Alexander Martínez</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Documento</label>
+            <select id="fTipoDoc">
+              <option value="">Seleccionar…</option>
+              <option>Licencia</option>
+              <option>Descanso Médico</option>
+              <option>Sanción</option>
+              <option>Consulta</option>
+              <option>ETI</option>
+              <option>Constancia</option>
+              <option>Memorándum</option>
+              <option>Preaviso</option>
+              <option>Apercibimiento</option>
+              <option>Carta de Renuncia</option>
+              <option>Teniente Gobernador</option>
+              <option>Otro</option>
+            </select>
+          </div>
+
+          <!-- Periodo documento -->
+          <div class="form-group">
+            <label>Fecha Inicio Doc.</label>
+            <input type="date" id="fFechaInicioDoc" oninput="calcDias()">
+          </div>
+          <div class="form-group">
+            <label>Fecha Término Doc.</label>
+            <input type="date" id="fFechaTermDoc" oninput="calcDias()">
+          </div>
+          <div class="form-group">
+            <label>Días Transcurridos</label>
+            <input type="text" id="fDias" readonly>
+          </div>
+          <div class="form-group">
+            <label>Responsable de Recepción</label>
+            <input type="text" id="fRespRecepcion" placeholder="Nombre quien recibe">
+          </div>
+
+          <div class="form-group form-full">
+            <label>Observaciones</label>
+            <textarea id="fObservaciones" placeholder="Notas adicionales sobre la atención…"></textarea>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="registrarAtencion()">💾 Registrar Atención</button>
+          <button class="btn btn-secondary" onclick="limpiarFormulario()">↺ Limpiar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ HISTORIAL ══════════════════════════════════════ -->
+    <div id="section-historial" class="section">
+      <div class="page-header">
+        <h2>📋 Historial de Atenciones</h2>
+        <p id="histSub">Tus registros de atenciones</p>
+      </div>
+
+      <!-- BOTÓN ENVIAR CORREO OUTLOOK -->
+      <div class="card" style="margin-bottom:20px;border-color:rgba(0,120,212,0.35);background:rgba(0,120,212,0.05);">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div style="font-size:2rem;">📧</div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:1rem;">Enviar Reporte por Correo Outlook</div>
+            <div style="color:var(--gray);font-size:0.82rem;margin-top:2px;">Genera Excel con los registros del período + tabla resumen en el cuerpo del correo</div>
+          </div>
+          <button class="btn" onclick="abrirModalCorreo()"
+            style="background:linear-gradient(135deg,#0078d4,#106ebe);color:#fff;box-shadow:0 6px 20px rgba(0,120,212,0.3);white-space:nowrap;padding:12px 24px;">
+            ✉️ Enviar Reporte Outlook
+          </button>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="filter-bar">
+        <div class="form-group">
+          <label>Buscar (DNI, nombre…)</label>
+          <input type="text" id="filtBusqueda" placeholder="Buscar…" oninput="filtrarHistorial()">
+        </div>
+        <div class="form-group">
+          <label>Empresa</label>
+          <select id="filtEmpresa" onchange="filtrarHistorial()">
+            <option value="">Todas</option>
+            <option>RAPEL</option>
+            <option>VERFRUT</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo Documento</label>
+          <select id="filtTipo" onchange="filtrarHistorial()">
+            <option value="">Todos</option>
+            <option>Licencia</option>
+            <option>Descanso Médico</option>
+            <option>Sanción</option>
+            <option>Consulta</option>
+            <option>ETI</option>
+            <option>Constancia</option>
+            <option>Memorándum</option>
+            <option>Preaviso</option>
+            <option>Apercibimiento</option>
+            <option>Carta de Renuncia</option>
+            <option>Teniente Gobernador</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Desde</label>
+          <input type="date" id="filtDesde" onchange="filtrarHistorial()">
+        </div>
+        <div class="form-group">
+          <label>Hasta</label>
+          <input type="date" id="filtHasta" onchange="filtrarHistorial()">
+        </div>
+        <button class="btn btn-secondary" onclick="limpiarFiltros()">✕ Limpiar</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fecha</th>
+              <th>DNI</th>
+              <th>Nombre</th>
+              <th>Empresa</th>
+              <th>Tipo Doc.</th>
+              <th>Supervisor</th>
+              <th>Resp. Recepción</th>
+              <th>Estado</th>
+              <th>Usuario</th>
+            </tr>
+          </thead>
+          <tbody id="tablaHistorial"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="histEmptyState" style="display:none;">
+        <div class="emoji">📭</div>
+        <p>No hay registros que coincidan con el filtro.</p>
+      </div>
+      <div style="margin-top:12px;color:var(--gray);font-size:0.8rem;" id="histCount"></div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════ IMPORTAR DATOS ══════════════════════════════════════ -->
+    <div id="section-importar" class="section">
+      <div class="page-header">
+        <h2>📥 Importar Base de Datos Histórica</h2>
+        <p>Carga el archivo Excel con las atenciones históricas al sistema</p>
+      </div>
+
+      <!-- RESUMEN BASE ACTUAL -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
+        <div class="stat-card">
+          <div class="stat-label">Base Histórica Excel</div>
+          <div class="stat-num" style="color:var(--accent)">56,372</div>
+          <div class="stat-sub">registros detectados</div>
+          <div class="stat-icon">📊</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Período</div>
+          <div class="stat-num" style="color:var(--accent2);font-size:1.4rem;">2024–2026</div>
+          <div class="stat-sub">años en la base</div>
+          <div class="stat-icon">📅</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Supervisores</div>
+          <div class="stat-num" style="color:var(--warn)">14</div>
+          <div class="stat-sub">usuarios mapeados</div>
+          <div class="stat-icon">👥</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Importados al sistema</div>
+          <div class="stat-num" style="color:var(--accent2)" id="statImportados">0</div>
+          <div class="stat-sub">registros cargados</div>
+          <div class="stat-icon">✅</div>
+        </div>
+      </div>
+
+      <!-- MAPA DE USUARIOS -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">👥 Mapeo de Usuarios Excel → Sistema</div>
+        <p style="color:var(--gray);font-size:0.82rem;margin:10px 0 16px;">Así se asignarán los registros históricos a cada supervisor:</p>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;">
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Fabián Zapata</div><div style="color:var(--gray);font-size:0.75rem;">→ fzapata</div></div>
+            <div style="color:var(--accent);font-weight:700;">8,700</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Alexander Martínez</div><div style="color:var(--gray);font-size:0.75rem;">→ almartinez</div></div>
+            <div style="color:var(--accent);font-weight:700;">8,544</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Alex Tineo</div><div style="color:var(--gray);font-size:0.75rem;">→ atineo</div></div>
+            <div style="color:var(--accent);font-weight:700;">7,030</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Elberth Castro</div><div style="color:var(--gray);font-size:0.75rem;">→ ecastro</div></div>
+            <div style="color:var(--accent);font-weight:700;">6,232</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Pool Tamayo</div><div style="color:var(--gray);font-size:0.75rem;">→ ptamayo</div></div>
+            <div style="color:var(--accent);font-weight:700;">5,736</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Sergio Viera</div><div style="color:var(--gray);font-size:0.75rem;">→ sviera</div></div>
+            <div style="color:var(--accent);font-weight:700;">3,673</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Flor Pulache</div><div style="color:var(--gray);font-size:0.75rem;">→ fpulache</div></div>
+            <div style="color:var(--accent);font-weight:700;">3,532</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Socorro Miranda</div><div style="color:var(--gray);font-size:0.75rem;">→ smiranda</div></div>
+            <div style="color:var(--accent);font-weight:700;">3,067</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Yhanelly Luzón</div><div style="color:var(--gray);font-size:0.75rem;">→ yluzon</div></div>
+            <div style="color:var(--accent);font-weight:700;">3,031</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Marcos Ypanaqué</div><div style="color:var(--gray);font-size:0.75rem;">→ mypanaque</div></div>
+            <div style="color:var(--accent);font-weight:700;">2,634</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Roberto Molero</div><div style="color:var(--gray);font-size:0.75rem;">→ rmolero</div></div>
+            <div style="color:var(--accent);font-weight:700;">1,469</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Juan Gutiérrez</div><div style="color:var(--gray);font-size:0.75rem;">→ jgutierrez</div></div>
+            <div style="color:var(--accent);font-weight:700;">1,344</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">John Hernández</div><div style="color:var(--gray);font-size:0.75rem;">→ jhernandez</div></div>
+            <div style="color:var(--accent);font-weight:700;">1,229</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:0.82rem;font-weight:600;">Joel Timoteo — Admin</div><div style="color:var(--gray);font-size:0.75rem;">→ jtimoteo</div></div>
+            <div style="color:var(--warn);font-weight:700;">51</div>
+          </div>
+          <div style="background:rgba(255,75,110,0.06);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,75,110,0.15);">
+            <div><div style="font-size:0.82rem;font-weight:600;">Sin usuario (Deysi, Wilberto, Jaime)</div><div style="color:var(--gray);font-size:0.75rem;">Solo visibles para admin</div></div>
+            <div style="color:var(--danger);font-weight:700;">100</div>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <!-- CARGADOR DE ARCHIVO -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">📂 Cargar Archivo Excel</div>
+        <p style="color:var(--gray);font-size:0.82rem;margin:10px 0 16px;">
+          Sube el archivo <strong style="color:var(--accent)">sistema_de_atenciones_Master_2_0.xlsm</strong> u otro Excel con el mismo formato.<br>
+          El sistema leerá la hoja <strong>"base de atenciones diarias"</strong> automáticamente.
+        </p>
+
+        <!-- Drop zone -->
+        <div id="dropZone" onclick="document.getElementById('fileInput').click()"
+          style="border:2px dashed rgba(0,201,255,0.3);border-radius:16px;padding:40px;text-align:center;cursor:pointer;transition:all 0.2s;background:rgba(0,201,255,0.03);"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='rgba(0,201,255,0.08)'"
+          ondragleave="this.style.borderColor='rgba(0,201,255,0.3)';this.style.background='rgba(0,201,255,0.03)'"
+          ondrop="handleFileDrop(event)">
+          <div style="font-size:3rem;margin-bottom:12px;">📊</div>
+          <div style="font-weight:600;margin-bottom:6px;">Arrastra tu Excel aquí</div>
+          <div style="color:var(--gray);font-size:0.82rem;">o haz clic para seleccionar — .xlsx / .xlsm / .csv</div>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv" style="display:none" onchange="handleFileSelect(event)">
+
+        <!-- Progreso -->
+        <div id="importProgress" style="display:none;margin-top:20px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:0.85rem;" id="importMsg">Leyendo archivo…</span>
+            <span style="font-size:0.85rem;color:var(--accent);font-family:'JetBrains Mono',monospace;" id="importPct">0%</span>
+          </div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
+            <div id="importBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width 0.3s;"></div>
+          </div>
+          <div style="margin-top:12px;color:var(--gray);font-size:0.8rem;" id="importDetalle"></div>
+        </div>
+
+        <!-- Resultado -->
+        <div id="importResultado" style="display:none;margin-top:20px;padding:16px 20px;border-radius:12px;background:rgba(14,240,160,0.08);border:1px solid rgba(14,240,160,0.25);">
+          <div style="color:var(--accent2);font-weight:700;font-size:1rem;" id="importResMsg"></div>
+          <div style="color:var(--gray);font-size:0.82rem;margin-top:6px;" id="importResDet"></div>
+        </div>
+      </div>
+
+      <!-- OPCIONES DE IMPORTACIÓN -->
+      <div class="card">
+        <div class="card-title">⚙️ Opciones de Importación</div>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
+          <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+            <input type="radio" name="importMode" value="todos" checked style="accent-color:var(--accent);width:16px;height:16px;">
+            <div>
+              <div style="font-weight:600;font-size:0.9rem;">Importar todos los registros</div>
+              <div style="color:var(--gray);font-size:0.8rem;">Carga los 56,372 registros completos al sistema</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+            <input type="radio" name="importMode" value="anio" style="accent-color:var(--accent);width:16px;height:16px;">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:0.9rem;">Importar por año específico</div>
+              <div style="color:var(--gray);font-size:0.8rem;">Solo carga los registros del año seleccionado</div>
+            </div>
+            <select id="selectAnioImport" style="padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:Outfit,sans-serif;font-size:0.85rem;outline:none;">
+              <option value="2026">2026</option>
+              <option value="2025" selected>2025</option>
+              <option value="2024">2024</option>
+            </select>
+          </label>
+          <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+            <input type="radio" name="importMode" value="usuario" style="accent-color:var(--accent);width:16px;height:16px;">
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:0.9rem;">Importar por supervisor específico</div>
+              <div style="color:var(--gray);font-size:0.8rem;">Solo los registros de un usuario</div>
+            </div>
+            <select id="selectUsuarioImport" style="padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:Outfit,sans-serif;font-size:0.85rem;outline:none;">
+              <option value="ecastro">Elberth Castro</option>
+              <option value="fzapata">Alex Zapata</option>
+              <option value="yluzon">Yhanelly Luzón</option>
+              <option value="sviera">Sergio Viera</option>
+              <option value="ptamayo">Pool Tamayo</option>
+              <option value="smiranda">Socorro Miranda</option>
+              <option value="almartinez">Alexander Martínez</option>
+              <option value="mypanaque">Marco Ypanaqué</option>
+              <option value="fpulache">Flor Pulache</option>
+              <option value="rmolero">Roberto Molero</option>
+              <option value="atineo">Alexander Tineo</option>
+              <option value="jhernandez">John Hernández</option>
+            </select>
+          </label>
+        </div>
+        <div class="btn-row" style="margin-top:20px;">
+          <button class="btn btn-primary" onclick="ejecutarImportacion()" id="btnImportar" disabled>
+            📥 Iniciar Importación
+          </button>
+          <button class="btn btn-danger" onclick="limpiarImportacion()" id="btnLimpiarImport" style="display:none;">
+            🗑 Limpiar datos importados
+          </button>
+        </div>
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(255,184,48,0.07);border:1px solid rgba(255,184,48,0.2);border-radius:10px;font-size:0.78rem;color:var(--gray);">
+          ⚠️ Los datos importados se cargarán en memoria del sistema. Para persistencia permanente conecta Supabase.
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════ ADMIN ══════════════════════════════════════ -->
+    <div id="section-admin" class="section">
+      <div class="page-header">
+        <h2>⚙️ Panel de Administración</h2>
+        <p>Gestión completa del sistema — solo Administrador</p>
+      </div>
+
+      <!-- ELIMINAR REGISTRO -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">🗑 Eliminar Registro</div>
+        <div class="form-grid" style="margin-top:16px;">
+          <div class="form-group">
+            <label>Fecha de Atención</label>
+            <input type="date" id="delFecha">
+          </div>
+          <div class="form-group">
+            <label>DNI del Trabajador</label>
+            <input type="text" id="delDNI" maxlength="8">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-danger" onclick="eliminarRegistro()">🗑 Eliminar Registro</button>
+        </div>
+      </div>
+
+      <!-- TABLA GLOBAL -->
+      <div class="card">
+        <div class="card-title">📊 Todos los Registros del Sistema</div>
+        <div style="margin-top:16px;" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fecha</th>
+                <th>DNI</th>
+                <th>Nombre</th>
+                <th>Empresa</th>
+                <th>Tipo Doc.</th>
+                <th>Supervisor</th>
+                <th>Usuario</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tablaAdmin"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ CONSULTA GENERAL ══════════════════════════════════════ -->
+    <div id="section-consulta" class="section">
+      <div class="page-header">
+        <h2>🔍 Consulta General de Trabajadores</h2>
+        <p>Busca cualquier trabajador por DNI y ve su historial completo de atenciones en todo el sistema</p>
+      </div>
+
+      <!-- BUSCADOR -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">🔎 Buscar Trabajador</div>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;">
+          <div class="form-group" style="flex:1;min-width:200px;">
+            <label>DNI del Trabajador</label>
+            <input type="text" id="cInpDNI" placeholder="Ingresa el DNI (8 dígitos)" maxlength="8"
+              oninput="this.value=this.value.replace(/\D/g,'')"
+              onkeydown="if(event.key==='Enter') consultarTrabajador()">
+          </div>
+          <div class="form-group" style="flex:1;min-width:200px;">
+            <label>O buscar por nombre</label>
+            <input type="text" id="cInpNombre" placeholder="Escribe nombre o apellido…"
+              onkeydown="if(event.key==='Enter') consultarTrabajador()">
+          </div>
+          <button class="btn btn-primary" onclick="consultarTrabajador()" style="padding:12px 28px;">🔍 Buscar</button>
+          <button class="btn btn-secondary" onclick="limpiarConsulta()">✕ Limpiar</button>
+        </div>
+      </div>
+
+      <!-- FICHA DEL TRABAJADOR -->
+      <div id="fichaWrap" style="display:none;">
+
+        <!-- INFO TRABAJADOR -->
+        <div class="card" style="margin-bottom:20px;border-color:rgba(0,201,255,0.3);">
+          <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+            <div id="fichaAvatar" style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--blue));display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-size:1.3rem;font-weight:700;" id="fichaNombre">—</div>
+              <div style="color:var(--gray);font-size:0.85rem;margin-top:4px;" id="fichaSub">—</div>
+            </div>
+            <div style="display:flex;gap:28px;flex-wrap:wrap;">
+              <div style="text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--accent);" id="fichaTotal">0</div>
+                <div style="color:var(--gray);font-size:0.75rem;">Atenciones totales</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--warn);" id="fichaEsteAnio">0</div>
+                <div style="color:var(--gray);font-size:0.75rem;">Este año</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--accent2);" id="fichaEsteMes">0</div>
+                <div style="color:var(--gray);font-size:0.75rem;">Este mes</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DATOS BD -->
+          <div id="fichaDatos" style="margin-top:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding-top:16px;border-top:1px solid var(--border);"></div>
+        </div>
+
+        <!-- ALERTAS DOCUMENTOS CRÍTICOS -->
+        <div id="fichaAlertas" style="margin-bottom:16px;"></div>
+
+        <!-- MINI STATS POR TIPO DOCUMENTO -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px;">
+          <div class="card">
+            <div class="card-title">📑 Por Tipo de Documento</div>
+            <div id="fichaStatsTipo" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">👤 Por Supervisor que atendió</div>
+            <div id="fichaStatsSup" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">🏢 Por Empresa</div>
+            <div id="fichaStatsEmp" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+        </div>
+
+        <!-- FILTRO RÁPIDO HISTORIAL DEL TRABAJADOR -->
+        <div class="card">
+          <div class="card-title">📋 Historial Completo de Atenciones</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 16px;">
+            <input type="text" id="cFiltGeneral" placeholder="Filtrar…" oninput="filtrarFicha()"
+              style="padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Outfit',sans-serif;font-size:0.85rem;outline:none;flex:1;min-width:140px;">
+            <select id="cFiltAnio" onchange="filtrarFicha()"
+              style="padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Outfit',sans-serif;font-size:0.85rem;outline:none;">
+              <option value="">Todos los años</option>
+              <option>2025</option><option>2024</option><option>2023</option>
+            </select>
+            <select id="cFiltTipoDoc" onchange="filtrarFicha()"
+              style="padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Outfit',sans-serif;font-size:0.85rem;outline:none;">
+              <option value="">Todos los documentos</option>
+              <option>Licencia</option><option>Descanso Médico</option><option>Sanción</option>
+              <option>Consulta</option><option>ETI</option><option>Constancia</option>
+              <option>Memorándum</option><option>Preaviso</option><option>Apercibimiento</option>
+              <option>Carta de Renuncia</option><option>Teniente Gobernador</option>
+            </select>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Fecha</th>
+                  <th>Tipo Documento</th>
+                  <th>Días</th>
+                  <th>Supervisor</th>
+                  <th>Resp. Recepción</th>
+                  <th>Empresa</th>
+                  <th>Fundo</th>
+                  <th>Observaciones</th>
+                  <th>Registrado por</th>
+                  <th>Semana</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="tablaFicha"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:10px;color:var(--gray);font-size:0.8rem;" id="fichaCount"></div>
+        </div>
+      </div>
+
+      <!-- EMPTY / INICIAL -->
+      <div class="empty-state" id="consultaEmpty">
+        <div class="emoji">🔍</div>
+        <p>Ingresa un DNI o nombre para buscar el historial completo de un trabajador</p>
+        <p style="margin-top:8px;font-size:0.8rem;">La búsqueda incluye atenciones registradas por <strong style="color:var(--accent)">todos los supervisores</strong></p>
+      </div>
+      <div class="empty-state" id="consultaNoEncontrado" style="display:none;">
+        <div class="emoji">😕</div>
+        <p>No se encontró ningún trabajador ni registro con ese criterio</p>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- MOBILE NAV -->
+  <div class="mobile-nav">
+    <button class="mobile-nav-btn active" onclick="showSection('dashboard');setMobileActive(this)">
+      <span class="mni">📊</span>Dashboard
+    </button>
+    <button class="mobile-nav-btn" onclick="showSection('registro');setMobileActive(this)">
+      <span class="mni">📝</span>Registro
+    </button>
+    <button class="mobile-nav-btn" onclick="showSection('historial');setMobileActive(this)">
+      <span class="mni">📋</span>Historial
+    </button>
+    <button class="mobile-nav-btn" onclick="showSection('consulta');setMobileActive(this)">
+      <span class="mni">🔍</span>Consulta
+    </button>
+    <button class="mobile-nav-btn admin-only" onclick="showSection('importar');setMobileActive(this)" style="display:none"><span class="mni">📥</span>Importar</button>
+    <button class="mobile-nav-btn admin-only" id="mobileAdminBtn" style="display:none"
+      onclick="showSection('admin');setMobileActive(this)">
+      <span class="mni">⚙️</span>Admin
+    </button>
+  </div>
+</div><!-- /app -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  DATOS DEL SISTEMA
+// ════════════════════════════════════════════════════════
+
+const USUARIOS = {
+  ecastro:   { pass:'ecastro2025',   nombre:'Elberth Castro',       cargo:'Supervisor GH',             admin:false },
+  mmechato:  { pass:'mmechato2025',  nombre:'Muriel Mechato',       cargo:'Asistente RL',              admin:false },
+  fzapata:   { pass:'fzapata2025',   nombre:'Alex Zapata',          cargo:'Supervisor GH',             admin:false },
+  yluzon:    { pass:'yluzon2025',    nombre:'Yhanelly Luzón',       cargo:'Supervisora GH',            admin:false },
+  sviera:    { pass:'sviera2025',    nombre:'Sergio Viera',         cargo:'Supervisor GH',             admin:false },
+  ptamayo:   { pass:'ptamayo2025',   nombre:'Pool Tamayo',          cargo:'Supervisor GH',             admin:false },
+  ovilela:   { pass:'ovilela2025',   nombre:'Olga Vilela',          cargo:'Jefa de RL',                admin:false },
+  jchavez:   { pass:'jchavez2025',   nombre:'Jorge Chávez',         cargo:'Coordinador RL',            admin:false },
+  rmolero:   { pass:'rmolero2025',   nombre:'Roberto Molero',       cargo:'Supervisor GH',             admin:false },
+  mypanaque: { pass:'mypanaque2025', nombre:'Marco Panaqué',        cargo:'Asistente RL',              admin:false },
+  fpulache:  { pass:'fpulache2025',  nombre:'Flor Pulache',         cargo:'Supervisora GH',            admin:false },
+  smiranda:  { pass:'smiranda2025',  nombre:'Socorro Miranda',      cargo:'Asistente RL',              admin:false },
+  almartinez:{ pass:'almartinez2025',nombre:'Alexander Martínez',   cargo:'Supervisor GH',             admin:false },
+  jtimoteo:  { pass:'kevin2025',     nombre:'Joel Timoteo Gonza',   cargo:'Administrador del Sistema', admin:true  }
+};
+
+// Base datos RAPEL ejemplo
+const BD_RAPEL = [
+  { dni:'12345678', nombre:'Carlos Mamani Torres',    sexo:'M', empresa:'RAPEL',   fundo:'Fundo La Joya',      cargo:'Operario',       inicio:'2020-03-15' },
+  { dni:'23456789', nombre:'Rosa Flores Quispe',      sexo:'F', empresa:'RAPEL',   fundo:'Fundo El Palto',     cargo:'Cosechadora',    inicio:'2019-07-01' },
+  { dni:'34567890', nombre:'Pedro Sánchez Llanos',    sexo:'M', empresa:'RAPEL',   fundo:'Fundo Las Lomas',    cargo:'Regador',        inicio:'2021-11-20' },
+  { dni:'45678901', nombre:'María López Chunga',      sexo:'F', empresa:'RAPEL',   fundo:'Fundo La Molina',    cargo:'Seleccionadora', inicio:'2018-04-10' },
+  { dni:'56789012', nombre:'José Rodríguez Cruz',     sexo:'M', empresa:'RAPEL',   fundo:'Fundo La Joya',      cargo:'Tractorista',    inicio:'2022-01-05' },
+];
+
+// Base datos VERFRUT ejemplo
+const BD_VERFRUT = [
+  { dni:'67890123', nombre:'Ana Crispin Zapata',      sexo:'F', empresa:'VERFRUT', fundo:'Fundo San José',     cargo:'Empacadora',     inicio:'2020-08-12' },
+  { dni:'78901234', nombre:'Luis Panta Timana',       sexo:'M', empresa:'VERFRUT', fundo:'Fundo Los Pinos',    cargo:'Operario',       inicio:'2017-02-28' },
+  { dni:'89012345', nombre:'Carmen Villanueva Paz',   sexo:'F', empresa:'VERFRUT', fundo:'Fundo El Carmen',    cargo:'Supervisora',    inicio:'2016-06-15' },
+  { dni:'90123456', nombre:'Jorge Chira Bancayan',    sexo:'M', empresa:'VERFRUT', fundo:'Fundo La Viña',      cargo:'Mecánico',       inicio:'2023-03-01' },
+  { dni:'01234567', nombre:'Elena Rujel Castillo',    sexo:'F', empresa:'VERFRUT', fundo:'Fundo San José',     cargo:'Cosechadora',    inicio:'2021-09-14' },
+];
+
+// Atenciones en memoria (se conectará a Supabase)
+let ATENCIONES = [
+  { id:1, fecha:'2025-01-15', horaInicio:'08:30', semana:3, mes:'Enero', anio:2025, dni:'12345678', nombre:'Carlos Mamani Torres', sexo:'M', empresa:'RAPEL', fundo:'Fundo La Joya', cargo:'Operario', supervisor:'Elberth Castro', tipoDoc:'Descanso Médico', fechaInicioDoc:'2025-01-15', fechaTermDoc:'2025-01-18', dias:4, respRecepcion:'Muriel Mechato', obs:'', estado:'PENDIENTE', usuario:'ecastro' },
+  { id:2, fecha:'2025-01-20', horaInicio:'09:15', semana:4, mes:'Enero', anio:2025, dni:'23456789', nombre:'Rosa Flores Quispe',   sexo:'F', empresa:'RAPEL', fundo:'Fundo El Palto', cargo:'Cosechadora', supervisor:'Pool Tamayo', tipoDoc:'Licencia', fechaInicioDoc:'2025-01-20', fechaTermDoc:'2025-01-22', dias:3, respRecepcion:'Marco Panaqué', obs:'', estado:'PENDIENTE', usuario:'ptamayo' },
+  { id:3, fecha:'2025-02-05', horaInicio:'10:00', semana:6, mes:'Febrero', anio:2025, dni:'67890123', nombre:'Ana Crispin Zapata', sexo:'F', empresa:'VERFRUT', fundo:'Fundo San José', cargo:'Empacadora', supervisor:'Yhanelly Luzón', tipoDoc:'Consulta', fechaInicioDoc:'', fechaTermDoc:'', dias:'', respRecepcion:'Socorro Miranda', obs:'Consulta laboral', estado:'PENDIENTE', usuario:'yluzon' },
+  { id:4, fecha:'2025-02-18', horaInicio:'11:30', semana:8, mes:'Febrero', anio:2025, dni:'78901234', nombre:'Luis Panta Timana',  sexo:'M', empresa:'VERFRUT', fundo:'Fundo Los Pinos', cargo:'Operario', supervisor:'Sergio Viera', tipoDoc:'Sanción', fechaInicioDoc:'2025-02-18', fechaTermDoc:'', dias:'', respRecepcion:'Flor Pulache', obs:'', estado:'PENDIENTE', usuario:'sviera' },
+  { id:5, fecha:'2025-03-01', horaInicio:'08:00', semana:9, mes:'Marzo', anio:2025, dni:'12345678', nombre:'Carlos Mamani Torres', sexo:'M', empresa:'RAPEL', fundo:'Fundo La Joya', cargo:'Operario', supervisor:'Elberth Castro', tipoDoc:'Descanso Médico', fechaInicioDoc:'2025-03-01', fechaTermDoc:'2025-03-05', dias:5, respRecepcion:'Muriel Mechato', obs:'2do descanso del año', estado:'PENDIENTE', usuario:'ecastro' },
+  { id:6, fecha:'2025-03-10', horaInicio:'14:00', semana:11, mes:'Marzo', anio:2025, dni:'34567890', nombre:'Pedro Sánchez Llanos', sexo:'M', empresa:'RAPEL', fundo:'Fundo Las Lomas', cargo:'Regador', supervisor:'Jorge Chávez', tipoDoc:'ETI', fechaInicioDoc:'', fechaTermDoc:'', dias:'', respRecepcion:'Olga Vilela', obs:'', estado:'PENDIENTE', usuario:'jchavez' },
+  { id:7, fecha:'2025-03-15', horaInicio:'09:00', semana:11, mes:'Marzo', anio:2025, dni:'45678901', nombre:'María López Chunga',  sexo:'F', empresa:'RAPEL', fundo:'Fundo La Molina', cargo:'Seleccionadora', supervisor:'Flor Pulache', tipoDoc:'Constancia', fechaInicioDoc:'', fechaTermDoc:'', dias:'', respRecepcion:'Alexander Martínez', obs:'', estado:'PENDIENTE', usuario:'fpulache' },
+];
+
+// ════════════════════════════════════════════════════════
+//  ESTADO SESIÓN
+// ════════════════════════════════════════════════════════
+let session = null;
+let intentosFallidos = 0;
+let chartTipo=null, chartResp=null, chartEmp=null, chartTend=null, chartRank=null;
+let periodoActivo = 'dia';
+
+// ════════════════════════════════════════════════════════
+//  SPLASH
+// ════════════════════════════════════════════════════════
+const msgs = ['Inicializando entorno Verfrut/Rapel…','Validando módulos del sistema…','Optimizando recursos internos…','Cargando configuraciones…','Preparando entorno de trabajo…','Sincronizando datos corporativos…'];
+let pct = 0;
+const splashBar = document.getElementById('splashBar');
+const splashPct = document.getElementById('splashPct');
+const splashMsg = document.getElementById('splashMsg');
+
+function animateSplash(){
+  if(pct>100){
+    document.getElementById('splash').style.opacity='0';
+    document.getElementById('splash').style.transition='opacity 0.5s';
+    setTimeout(()=>{
+      document.getElementById('splash').style.display='none';
+      mostrarLogin();
+    },500);
+    return;
+  }
+  splashBar.style.width = pct+'%';
+  splashPct.textContent = pct+'%';
+  splashMsg.textContent = msgs[Math.floor(Math.random()*msgs.length)];
+  pct++;
+  setTimeout(animateSplash, 28);
+}
+window.addEventListener('load', ()=>{ setTimeout(animateSplash,400); });
+
+// ════════════════════════════════════════════════════════
+//  LOGIN
+// ════════════════════════════════════════════════════════
+function mostrarLogin(){
+  const ls = document.getElementById('login-screen');
+  ls.style.display='flex';
+  setTimeout(()=>{ ls.style.opacity='1'; },50);
+  document.getElementById('inpUsuario').focus();
+}
+
+document.getElementById('inpPass').addEventListener('keydown',e=>{if(e.key==='Enter') loginClick();});
+document.getElementById('inpUsuario').addEventListener('keydown',e=>{if(e.key==='Enter') document.getElementById('inpPass').focus();});
+document.getElementById('btnLogin').addEventListener('click', loginClick);
+
+function loginClick(){
+  const usuario = document.getElementById('inpUsuario').value.trim().toLowerCase();
+  const pass = document.getElementById('inpPass').value;
+  const u = USUARIOS[usuario];
+
+  if(u && u.pass === pass){
+    session = { usuario, ...u };
+    document.getElementById('login-screen').style.display='none';
+    iniciarApp();
+  } else {
+    intentosFallidos++;
+    const badge = document.getElementById('intentoBadge');
+    badge.style.display='block';
+    document.getElementById('intentoNum').textContent=intentosFallidos;
+    const err = document.getElementById('loginError');
+    err.style.display='block';
+    err.textContent = intentosFallidos >= 3
+      ? '🔒 Demasiados intentos. Recarga la página.'
+      : `❌ Usuario o contraseña incorrectos. Intento ${intentosFallidos}/3`;
+    if(intentosFallidos>=3) document.getElementById('btnLogin').disabled=true;
+    document.getElementById('inpPass').value='';
+    document.getElementById('inpPass').focus();
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  INICIAR APP
+// ════════════════════════════════════════════════════════
+function iniciarApp(){
+  const app = document.getElementById('app');
+  app.style.display='block';
+
+  // Datos topbar
+  const ini = session.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  document.getElementById('topAvatar').textContent = ini;
+  document.getElementById('topNombre').textContent = session.nombre;
+  document.getElementById('topCargo').textContent = session.cargo;
+
+  // Admin
+  if(session.admin){
+    document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');
+    document.getElementById('adminGlobal').style.display='block';
+    document.getElementById('dashTitle').textContent='Dashboard Administrador 👑';
+    document.getElementById('dashSub').textContent='Visión global de todos los usuarios y atenciones';
+    document.getElementById('histSub').textContent='Todos los registros del sistema';
+  }
+
+  // Saludos login
+  const hora = new Date().getHours();
+  let saludo = hora<12?'Buenos días':hora<18?'Buenas tardes':'Buenas noches';
+  const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const diaStr = dias[new Date().getDay()];
+  const motivaciones=['Liderazgo consciente: inspira con tu ejemplo.','Escucha activa: la empatía genera compromiso.','Comunicación efectiva: sé claro, directo y humano.'];
+  showToast(`${saludo}, ${session.nombre.split(' ')[0]}! 🎉 Feliz ${diaStr}.`, 'success', 5000);
+
+  // Formulario fechas auto
+  inicializarFormulario();
+  renderDashboard();
+}
+
+// ════════════════════════════════════════════════════════
+//  NAVEGACIÓN
+// ════════════════════════════════════════════════════════
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>{
+    if(t.textContent.toLowerCase().includes(id.substring(0,4))) t.classList.add('active');
+  });
+  if(id==='historial') renderHistorial();
+  if(id==='admin') renderAdmin();
+  if(id==='dashboard') renderDashboard();
+}
+function setMobileActive(btn){
+  document.querySelectorAll('.mobile-nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function cerrarSesion(){
+  session=null; intentosFallidos=0;
+  document.getElementById('app').style.display='none';
+  document.getElementById('inpUsuario').value='';
+  document.getElementById('inpPass').value='';
+  document.getElementById('loginError').style.display='none';
+  document.getElementById('intentoBadge').style.display='none';
+  document.getElementById('btnLogin').disabled=false;
+  mostrarLogin();
+}
+
+// ════════════════════════════════════════════════════════
+//  FORMULARIO REGISTRO
+// ════════════════════════════════════════════════════════
+function inicializarFormulario(){
+  const hoy = new Date();
+  document.getElementById('fFecha').value = hoy.toISOString().split('T')[0];
+  document.getElementById('fHoraInicio').value = hoy.toTimeString().substring(0,5);
+  document.getElementById('fSemana').value = getWeekNumber(hoy);
+  document.getElementById('fMes').value = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][hoy.getMonth()];
+}
+
+function getWeekNumber(d){
+  const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  date.setUTCDate(date.getUTCDate()+4-(date.getUTCDay()||7));
+  const yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date-yearStart)/86400000)+1)/7);
+}
+
+function buscarDNI(){
+  const dni = document.getElementById('inpDNI').value.trim();
+  if(!dni || dni.length<8){ showToast('Ingresa un DNI válido de 8 dígitos','error'); return; }
+
+  // Buscar en ambas bases
+  let trabajador = BD_RAPEL.find(w=>w.dni===dni) || BD_VERFRUT.find(w=>w.dni===dni);
+
+  document.getElementById('dniFound').style.display='none';
+  document.getElementById('dniNotFound').style.display='none';
+
+  if(trabajador){
+    document.getElementById('fDNI').value = trabajador.dni;
+    document.getElementById('fNombre').value = trabajador.nombre;
+    document.getElementById('fSexo').value = trabajador.sexo==='M'?'Masculino':'Femenino';
+    document.getElementById('fEmpresa').value = trabajador.empresa;
+    document.getElementById('fFundo').value = trabajador.fundo;
+    document.getElementById('fCargo').value = trabajador.cargo;
+    document.getElementById('fFundoActual').value = trabajador.fundo;
+
+    // Calcular antigüedad
+    const inicio = new Date(trabajador.inicio);
+    const hoy = new Date();
+    const anios = hoy.getFullYear()-inicio.getFullYear();
+    document.getElementById('fAnianza').value = `${anios} año(s)`;
+
+    document.getElementById('dniFound').style.display='block';
+    document.getElementById('dniFound').textContent = `✅ ${trabajador.nombre} — ${trabajador.empresa} / ${trabajador.fundo}`;
+
+    // Verificar reiterativo
+    verificarReiterativo(dni);
+  } else {
+    document.getElementById('fDNI').value = dni;
+    document.getElementById('fNombre').value='';
+    document.getElementById('fSexo').value='';
+    document.getElementById('fEmpresa').value='';
+    document.getElementById('fFundo').value='';
+    document.getElementById('fCargo').value='';
+    document.getElementById('dniNotFound').style.display='block';
+    document.getElementById('fNombre').focus();
+    document.getElementById('alertReiterativo').style.display='none';
+  }
+}
+
+function verificarReiterativo(dni){
+  const alertEl = document.getElementById('alertReiterativo');
+  const tipoDoc = document.getElementById('fTipoDoc').value;
+  const anio = new Date().getFullYear();
+  const mes = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][new Date().getMonth()];
+
+  const mismoAnio = ATENCIONES.filter(a=>a.dni===dni && a.anio===anio);
+  const mismoTipo = tipoDoc ? mismoAnio.filter(a=>a.tipoDoc===tipoDoc) : [];
+  const mismoMes = mismoTipo.filter(a=>a.mes===mes);
+
+  if(mismoAnio.length===0){
+    alertEl.className='alert-reiterativo alert-info';
+    alertEl.innerHTML=`✅ PRIMER REGISTRO del trabajador en ${anio}. No hay antecedentes previos.`;
+    alertEl.style.display='block';
+  } else if(tipoDoc && mismoTipo.length>0){
+    const critico = tipoDoc.toLowerCase().includes('teniente') && mismoTipo.length>=2;
+    alertEl.className=`alert-reiterativo ${critico?'alert-danger':'alert-warn'}`;
+    alertEl.innerHTML=`⚠️ DOCUMENTO REITERATIVO — Este trabajador ya tiene <strong>${mismoTipo.length}</strong> registro(s) de "${tipoDoc}" en ${anio}.
+      ${mismoMes.length>0?`<br>En el mes actual (${mes.toUpperCase()}): <strong>${mismoMes.length}</strong> registro(s).`:''}
+      ${critico?'<br><strong>🚨 ALERTA CRÍTICA — Validar con Coordinación antes de continuar.</strong>':''}`;
+    alertEl.style.display='block';
+  } else {
+    alertEl.style.display='none';
+  }
+}
+
+document.getElementById('fTipoDoc').addEventListener('change',()=>{
+  const dni = document.getElementById('fDNI').value;
+  if(dni) verificarReiterativo(dni);
+});
+
+function calcDias(){
+  const ini = document.getElementById('fFechaInicioDoc').value;
+  const fin = document.getElementById('fFechaTermDoc').value;
+  if(ini && fin){
+    const d1=new Date(ini), d2=new Date(fin);
+    if(d2>=d1){
+      document.getElementById('fDias').value = Math.round((d2-d1)/86400000)+1;
+    }
+  }
+}
+
+function registrarAtencion(){
+  const nombre = document.getElementById('fNombre').value.trim();
+  const supervisor = document.getElementById('fSupervisor').value;
+  const tipoDoc = document.getElementById('fTipoDoc').value;
+
+  if(!nombre||!supervisor||!tipoDoc){
+    showToast('Completa los campos obligatorios: Nombre, Supervisor y Tipo de Documento','error');
+    return;
+  }
+
+  const hoy = new Date();
+  const nuevoRegistro = {
+    id: ATENCIONES.length+1,
+    fecha: document.getElementById('fFecha').value,
+    horaInicio: document.getElementById('fHoraInicio').value,
+    semana: parseInt(document.getElementById('fSemana').value),
+    mes: document.getElementById('fMes').value,
+    anio: hoy.getFullYear(),
+    dni: document.getElementById('fDNI').value,
+    nombre,
+    sexo: document.getElementById('fSexo').value,
+    empresa: document.getElementById('fEmpresa').value,
+    fundo: document.getElementById('fFundo').value,
+    cargo: document.getElementById('fCargo').value,
+    supervisor,
+    tipoDoc,
+    fechaInicioDoc: document.getElementById('fFechaInicioDoc').value,
+    fechaTermDoc: document.getElementById('fFechaTermDoc').value,
+    dias: document.getElementById('fDias').value,
+    respRecepcion: document.getElementById('fRespRecepcion').value,
+    obs: document.getElementById('fObservaciones').value,
+    estado: 'PENDIENTE',
+    usuario: session.usuario
+  };
+
+  ATENCIONES.push(nuevoRegistro);
+  showToast(`✅ Atención registrada para ${nombre}`, 'success');
+  limpiarFormulario();
+  renderDashboard();
+}
+
+function limpiarFormulario(){
+  ['fDNI','fNombre','fSexo','fEmpresa','fFundo','fCargo','fFundoActual','fCelular','fAnianza',
+   'fFechaInicioDoc','fFechaTermDoc','fDias','fRespRecepcion','fObservaciones'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('fSupervisor').value='';
+  document.getElementById('fTipoDoc').value='';
+  document.getElementById('inpDNI').value='';
+  document.getElementById('dniFound').style.display='none';
+  document.getElementById('dniNotFound').style.display='none';
+  document.getElementById('alertReiterativo').style.display='none';
+  inicializarFormulario();
+}
+
+// ════════════════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════════════════
+function setPeriodo(p,btn){
+  periodoActivo=p;
+  document.querySelectorAll('.periodo-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashboard();
+}
+
+function filtrarPorPeriodo(atenciones){
+  const hoy=new Date();
+  return atenciones.filter(a=>{
+    const fa=new Date(a.fecha);
+    if(periodoActivo==='dia'){
+      return a.fecha===hoy.toISOString().split('T')[0];
+    } else if(periodoActivo==='semana'){
+      const lunes=new Date(hoy); lunes.setDate(hoy.getDate()-hoy.getDay()+1);
+      const domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+      return fa>=lunes && fa<=domingo;
+    } else if(periodoActivo==='mes'){
+      return fa.getMonth()===hoy.getMonth() && fa.getFullYear()===hoy.getFullYear();
+    } else {
+      return fa.getFullYear()===hoy.getFullYear();
+    }
+  });
+}
+
+function renderDashboard(){
+  if(!session) return;
+  const miData = session.admin ? ATENCIONES : ATENCIONES.filter(a=>a.usuario===session.usuario);
+  const data = filtrarPorPeriodo(miData);
+
+  document.getElementById('statTotal').textContent=data.length;
+  document.getElementById('statRapel').textContent=data.filter(a=>a.empresa==='RAPEL').length;
+  document.getElementById('statVerfrut').textContent=data.filter(a=>a.empresa==='VERFRUT').length;
+  const tiposUnicos=[...new Set(data.map(a=>a.tipoDoc))].filter(Boolean);
+  document.getElementById('statTipos').textContent=tiposUnicos.length;
+
+  // --- Chart Tipo Documento ---
+  const tiposCount={};
+  data.forEach(a=>{ if(a.tipoDoc) tiposCount[a.tipoDoc]=(tiposCount[a.tipoDoc]||0)+1; });
+  renderChart('chartTipo',chartTipo,'doughnut',Object.keys(tiposCount),Object.values(tiposCount),'Tipo de Documento');
+
+  // --- Chart Responsable ---
+  const respCount={};
+  data.forEach(a=>{ if(a.respRecepcion) respCount[a.respRecepcion]=(respCount[a.respRecepcion]||0)+1; });
+  renderChart('chartResponsable',chartResp,'bar',Object.keys(respCount),Object.values(respCount),'Responsable');
+
+  // --- Chart Empresa ---
+  renderChart('chartEmpresa',chartEmp,'pie',['RAPEL','VERFRUT'],
+    [data.filter(a=>a.empresa==='RAPEL').length,data.filter(a=>a.empresa==='VERFRUT').length],'Empresa');
+
+  // --- Tendencia mes ---
+  const hoy=new Date();
+  const diasMes=new Date(hoy.getFullYear(),hoy.getMonth()+1,0).getDate();
+  const tendLabels=[];const tendData=[];
+  for(let d=1;d<=diasMes;d++){
+    const key=`${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    tendLabels.push(d);
+    tendData.push(miData.filter(a=>a.fecha===key).length);
+  }
+  renderChart('chartTendencia',chartTend,'line',tendLabels,tendData,'Atenciones');
+
+  // --- Admin Global ---
+  if(session.admin){
+    const allData = filtrarPorPeriodo(ATENCIONES);
+    renderAdminStats(allData);
+    const rankData={};
+    allData.forEach(a=>{ rankData[a.usuario]=(rankData[a.usuario]||0)+1; });
+    const sorted=Object.entries(rankData).sort((a,b)=>b[1]-a[1]);
+    const labels=sorted.map(([u])=>USUARIOS[u]?.nombre||u);
+    const vals=sorted.map(([,v])=>v);
+    renderChart('chartRanking',chartRank,'bar',labels,vals,'Ranking');
+  }
+}
+
+function renderAdminStats(data){
+  const grid=document.getElementById('adminStatsGrid');
+  const usuarios=[...new Set(data.map(a=>a.usuario))];
+  grid.innerHTML=usuarios.map(u=>{
+    const n=data.filter(a=>a.usuario===u).length;
+    const info=USUARIOS[u]||{nombre:u,cargo:''};
+    return `<div class="stat-card">
+      <div class="stat-label">${info.nombre}</div>
+      <div class="stat-num" style="color:var(--accent);font-size:1.8rem;">${n}</div>
+      <div class="stat-sub">${info.cargo}</div>
+    </div>`;
+  }).join('');
+}
+
+const PALETTE=['#00c9ff','#0ef0a0','#ffb830','#ff4b6e','#a78bfa','#fb923c','#34d399','#60a5fa','#f472b6','#facc15'];
+
+function renderChart(canvasId, chartRef, type, labels, vals, label){
+  const ctx=document.getElementById(canvasId).getContext('2d');
+  if(chartRef) chartRef.destroy();
+  const newChart=new Chart(ctx,{
+    type,
+    data:{
+      labels,
+      datasets:[{
+        label,
+        data:vals,
+        backgroundColor: type==='line' ? 'rgba(0,201,255,0.15)' : PALETTE.slice(0,labels.length),
+        borderColor: type==='line' ? '#00c9ff' : PALETTE.slice(0,labels.length),
+        borderWidth: type==='line'?2:1,
+        fill: type==='line',
+        tension:0.4,
+        pointBackgroundColor:'#00c9ff',
+        pointRadius: type==='line'?3:0,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ labels:{ color:'#8892b0', font:{family:'Outfit',size:11} }, position: type==='doughnut'||type==='pie'?'bottom':'top' },
+        tooltip:{ backgroundColor:'rgba(10,15,61,0.95)', titleColor:'#00c9ff', bodyColor:'#f0f4ff', borderColor:'rgba(0,201,255,0.2)', borderWidth:1 }
+      },
+      scales: (type==='bar'||type==='line') ? {
+        x:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#8892b0',font:{family:'Outfit',size:10}} },
+        y:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#8892b0',font:{family:'Outfit',size:10}} }
+      } : {}
+    }
+  });
+  // Guardar referencia
+  if(canvasId==='chartTipo') chartTipo=newChart;
+  else if(canvasId==='chartResponsable') chartResp=newChart;
+  else if(canvasId==='chartEmpresa') chartEmp=newChart;
+  else if(canvasId==='chartTendencia') chartTend=newChart;
+  else if(canvasId==='chartRanking') chartRank=newChart;
+}
+
+// ════════════════════════════════════════════════════════
+//  HISTORIAL
+// ════════════════════════════════════════════════════════
+function renderHistorial(data){
+  if(!data){
+    const base = session.admin ? ATENCIONES : ATENCIONES.filter(a=>a.usuario===session.usuario);
+    data=base;
+  }
+  const tbody=document.getElementById('tablaHistorial');
+  const empty=document.getElementById('histEmptyState');
+  const count=document.getElementById('histCount');
+
+  if(data.length===0){
+    tbody.innerHTML=''; empty.style.display='block';
+    count.textContent='';
+    return;
+  }
+  empty.style.display='none';
+  tbody.innerHTML=data.map((a,i)=>`
+    <tr>
+      <td style="color:var(--gray);font-family:'JetBrains Mono',monospace;font-size:0.75rem">${a.id}</td>
+      <td>${formatFecha(a.fecha)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:0.82rem;">${a.dni}</td>
+      <td style="font-weight:500;">${a.nombre}</td>
+      <td><span style="font-size:0.78rem;padding:2px 8px;border-radius:6px;background:${a.empresa==='RAPEL'?'rgba(14,240,160,0.1)':'rgba(0,201,255,0.1)'};color:${a.empresa==='RAPEL'?'var(--accent2)':'var(--accent)'};">${a.empresa||'—'}</span></td>
+      <td style="font-size:0.83rem;">${a.tipoDoc||'—'}</td>
+      <td style="font-size:0.83rem;">${a.supervisor||'—'}</td>
+      <td style="font-size:0.83rem;">${a.respRecepcion||'—'}</td>
+      <td><span class="badge badge-pendiente">${a.estado}</span></td>
+      <td style="color:var(--gray);font-size:0.8rem;">${a.usuario}</td>
+    </tr>`).join('');
+  count.textContent=`Mostrando ${data.length} registro(s)`;
+}
+
+function filtrarHistorial(){
+  const busq=document.getElementById('filtBusqueda').value.toLowerCase();
+  const empresa=document.getElementById('filtEmpresa').value;
+  const tipo=document.getElementById('filtTipo').value;
+  const desde=document.getElementById('filtDesde').value;
+  const hasta=document.getElementById('filtHasta').value;
+
+  let base = session.admin ? ATENCIONES : ATENCIONES.filter(a=>a.usuario===session.usuario);
+  let data = base.filter(a=>{
+    const matchBusq=!busq||(a.dni+a.nombre+a.supervisor).toLowerCase().includes(busq);
+    const matchEmp=!empresa||a.empresa===empresa;
+    const matchTipo=!tipo||a.tipoDoc===tipo;
+    const matchDesde=!desde||a.fecha>=desde;
+    const matchHasta=!hasta||a.fecha<=hasta;
+    return matchBusq&&matchEmp&&matchTipo&&matchDesde&&matchHasta;
+  });
+  renderHistorial(data);
+}
+
+function limpiarFiltros(){
+  ['filtBusqueda','filtEmpresa','filtTipo','filtDesde','filtHasta'].forEach(id=>document.getElementById(id).value='');
+  renderHistorial();
+}
+
+// ════════════════════════════════════════════════════════
+//  ADMIN
+// ════════════════════════════════════════════════════════
+function renderAdmin(){
+  if(!session?.admin) return;
+  const tbody=document.getElementById('tablaAdmin');
+  tbody.innerHTML=ATENCIONES.map(a=>`
+    <tr>
+      <td style="color:var(--gray);font-size:0.78rem;font-family:'JetBrains Mono',monospace">${a.id}</td>
+      <td>${formatFecha(a.fecha)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:0.82rem;">${a.dni}</td>
+      <td>${a.nombre}</td>
+      <td>${a.empresa||'—'}</td>
+      <td>${a.tipoDoc||'—'}</td>
+      <td>${a.supervisor||'—'}</td>
+      <td style="color:var(--gray);font-size:0.8rem;">${a.usuario}</td>
+      <td><span class="badge badge-pendiente">${a.estado}</span></td>
+    </tr>`).join('');
+}
+
+function eliminarRegistro(){
+  if(!session?.admin){ showToast('Solo el administrador puede eliminar registros','error'); return; }
+  const fecha=document.getElementById('delFecha').value;
+  const dni=document.getElementById('delDNI').value.trim();
+  if(!fecha||!dni){ showToast('Ingresa fecha y DNI para eliminar','error'); return; }
+
+  const idx=ATENCIONES.findIndex(a=>a.fecha===fecha&&a.dni===dni);
+  if(idx===-1){ showToast('No se encontró registro con esa fecha y DNI','error'); return; }
+
+  if(confirm(`¿Eliminar el registro de ${ATENCIONES[idx].nombre} del ${formatFecha(fecha)}?`)){
+    ATENCIONES.splice(idx,1);
+    document.getElementById('delFecha').value='';
+    document.getElementById('delDNI').value='';
+    renderAdmin();
+    renderDashboard();
+    showToast('✅ Registro eliminado correctamente','success');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  CONSULTA GENERAL
+// ════════════════════════════════════════════════════════
+let fichaAtenciones = []; // atenciones del trabajador consultado
+
+function consultarTrabajador(){
+  const dni = document.getElementById('cInpDNI').value.trim();
+  const nombre = document.getElementById('cInpNombre').value.trim().toLowerCase();
+
+  if(!dni && !nombre){
+    showToast('Ingresa un DNI o nombre para buscar','error'); return;
+  }
+
+  // Buscar en BD base
+  let trabajador = null;
+  if(dni){
+    trabajador = BD_RAPEL.find(w=>w.dni===dni) || BD_VERFRUT.find(w=>w.dni===dni);
+  } else {
+    trabajador = [...BD_RAPEL,...BD_VERFRUT].find(w=>w.nombre.toLowerCase().includes(nombre));
+  }
+
+  // Buscar atenciones (aunque no esté en BD base, puede haber sido registrado manualmente)
+  let atenciones = [];
+  if(dni){
+    atenciones = ATENCIONES.filter(a=>a.dni===dni);
+  } else if(nombre){
+    atenciones = ATENCIONES.filter(a=>a.nombre.toLowerCase().includes(nombre));
+    // Si encontramos atenciones, extraer trabajador de ellas
+    if(!trabajador && atenciones.length>0){
+      const a0=atenciones[0];
+      trabajador = { dni:a0.dni, nombre:a0.nombre, sexo:a0.sexo==='Masculino'?'M':'F', empresa:a0.empresa, fundo:a0.fundo, cargo:a0.cargo, inicio:'' };
+    }
+  }
+
+  const fichaWrap = document.getElementById('fichaWrap');
+  const consultaEmpty = document.getElementById('consultaEmpty');
+  const consultaNoEnc = document.getElementById('consultaNoEncontrado');
+
+  if(!trabajador && atenciones.length===0){
+    fichaWrap.style.display='none';
+    consultaEmpty.style.display='none';
+    consultaNoEnc.style.display='block';
+    return;
+  }
+
+  consultaEmpty.style.display='none';
+  consultaNoEnc.style.display='none';
+  fichaWrap.style.display='block';
+
+  // Usar datos de atenciones si no hay en BD
+  const infoTrab = trabajador || { dni: atenciones[0]?.dni||'—', nombre: atenciones[0]?.nombre||'—', sexo:'', empresa: atenciones[0]?.empresa||'—', fundo: atenciones[0]?.fundo||'—', cargo: atenciones[0]?.cargo||'—', inicio:'' };
+
+  fichaAtenciones = atenciones;
+
+  // Avatar iniciales
+  const ini = infoTrab.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  document.getElementById('fichaAvatar').textContent = ini;
+  document.getElementById('fichaNombre').textContent = infoTrab.nombre;
+  document.getElementById('fichaSub').textContent =
+    `DNI: ${infoTrab.dni}  ·  ${infoTrab.empresa||'—'}  ·  ${infoTrab.cargo||'—'}  ·  ${infoTrab.fundo||'—'}`;
+
+  // Contadores
+  const hoy = new Date();
+  const anioActual = hoy.getFullYear();
+  const mesActual = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][hoy.getMonth()];
+  document.getElementById('fichaTotal').textContent = atenciones.length;
+  document.getElementById('fichaEsteAnio').textContent = atenciones.filter(a=>a.anio===anioActual).length;
+  document.getElementById('fichaEsteMes').textContent = atenciones.filter(a=>a.mes===mesActual&&a.anio===anioActual).length;
+
+  // Datos BD ficha
+  const campos = [
+    {label:'DNI', val: infoTrab.dni},
+    {label:'Sexo', val: infoTrab.sexo==='M'?'Masculino':infoTrab.sexo==='F'?'Femenino': infoTrab.sexo||'—'},
+    {label:'Empresa', val: infoTrab.empresa||'—'},
+    {label:'Fundo', val: infoTrab.fundo||'—'},
+    {label:'Cargo', val: infoTrab.cargo||'—'},
+    {label:'Antigüedad', val: infoTrab.inicio ? calcularAnianza(infoTrab.inicio) : '—'},
+  ];
+  document.getElementById('fichaDatos').innerHTML = campos.map(c=>`
+    <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 14px;">
+      <div style="color:var(--gray);font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;">${c.label}</div>
+      <div style="font-weight:600;margin-top:4px;font-size:0.9rem;">${c.val}</div>
+    </div>`).join('');
+
+  // Alertas documentos críticos
+  renderFichaAlertas(atenciones, anioActual);
+
+  // Mini stats
+  renderMiniStats('fichaStatsTipo', atenciones, 'tipoDoc');
+  renderMiniStats('fichaStatsSup', atenciones, 'supervisor');
+  renderMiniStats('fichaStatsEmp', atenciones, 'empresa');
+
+  // Tabla historial
+  renderTablaFicha(atenciones);
+}
+
+function renderFichaAlertas(atenciones, anioActual){
+  const contenedor = document.getElementById('fichaAlertas');
+  const porTipoAnio = {};
+  atenciones.filter(a=>a.anio===anioActual).forEach(a=>{
+    if(a.tipoDoc) porTipoAnio[a.tipoDoc]=(porTipoAnio[a.tipoDoc]||0)+1;
+  });
+
+  let html='';
+  Object.entries(porTipoAnio).forEach(([tipo,cnt])=>{
+    if(cnt>=3 && tipo.toLowerCase().includes('teniente')){
+      html+=`<div class="alert-reiterativo alert-danger" style="display:block;margin-bottom:10px;">
+        🚨 ALERTA CRÍTICA — <strong>${tipo}</strong>: ${cnt} registros en ${anioActual}. Validar con Coordinación.
+      </div>`;
+    } else if(cnt>=3){
+      html+=`<div class="alert-reiterativo alert-warn" style="display:block;margin-bottom:10px;">
+        ⚠️ Documento reiterativo — <strong>${tipo}</strong>: ${cnt} veces en ${anioActual}
+      </div>`;
+    }
+  });
+  contenedor.innerHTML=html;
+}
+
+function renderMiniStats(containerId, atenciones, campo){
+  const counts={};
+  atenciones.forEach(a=>{ if(a[campo]) counts[a[campo]]=(counts[a[campo]]||0)+1; });
+  const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const total=atenciones.length||1;
+  const colors=['var(--accent)','var(--accent2)','var(--warn)','#a78bfa','#fb923c'];
+  document.getElementById(containerId).innerHTML = sorted.length===0
+    ? '<div style="color:var(--gray);font-size:0.83rem;">Sin datos</div>'
+    : sorted.map(([k,v],i)=>`
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:0.82rem;color:var(--white);font-weight:500;">${k}</span>
+          <span style="font-size:0.82rem;color:${colors[i%colors.length]};font-weight:700;">${v}</span>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,0.07);border-radius:4px;">
+          <div style="height:100%;width:${Math.round(v/total*100)}%;background:${colors[i%colors.length]};border-radius:4px;transition:width 0.5s;"></div>
+        </div>
+      </div>`).join('');
+}
+
+function filtrarFicha(){
+  const texto = document.getElementById('cFiltGeneral').value.toLowerCase();
+  const anio = document.getElementById('cFiltAnio').value;
+  const tipo = document.getElementById('cFiltTipoDoc').value;
+  let data = fichaAtenciones.filter(a=>{
+    const matchTxt = !texto || (a.tipoDoc+a.supervisor+a.respRecepcion+a.obs+a.fundo).toLowerCase().includes(texto);
+    const matchAnio = !anio || String(a.anio)===anio;
+    const matchTipo = !tipo || a.tipoDoc===tipo;
+    return matchTxt && matchAnio && matchTipo;
+  });
+  renderTablaFicha(data);
+}
+
+function renderTablaFicha(data){
+  const tbody = document.getElementById('tablaFicha');
+  const count = document.getElementById('fichaCount');
+  if(data.length===0){
+    tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--gray);">Sin registros con ese filtro</td></tr>`;
+    count.textContent='';
+    return;
+  }
+  tbody.innerHTML = data.map((a,i)=>`
+    <tr>
+      <td style="color:var(--gray);font-size:0.75rem;font-family:'JetBrains Mono',monospace;">${a.id}</td>
+      <td style="white-space:nowrap;">${formatFecha(a.fecha)}</td>
+      <td><span style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;background:rgba(167,139,250,0.12);color:#a78bfa;">${a.tipoDoc||'—'}</span></td>
+      <td style="text-align:center;">${a.dias||'—'}</td>
+      <td style="font-size:0.83rem;">${a.supervisor||'—'}</td>
+      <td style="font-size:0.83rem;">${a.respRecepcion||'—'}</td>
+      <td><span style="font-size:0.75rem;padding:2px 8px;border-radius:6px;background:${a.empresa==='RAPEL'?'rgba(14,240,160,0.1)':'rgba(0,201,255,0.1)'};color:${a.empresa==='RAPEL'?'var(--accent2)':'var(--accent)'};">${a.empresa||'—'}</span></td>
+      <td style="font-size:0.82rem;">${a.fundo||'—'}</td>
+      <td style="font-size:0.8rem;color:var(--gray);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.obs||''}">${a.obs||'—'}</td>
+      <td style="color:var(--gray);font-size:0.8rem;">${a.usuario}</td>
+      <td style="text-align:center;font-size:0.8rem;">S${a.semana}</td>
+      <td><span class="badge badge-pendiente">${a.estado}</span></td>
+    </tr>`).join('');
+  count.textContent = `Mostrando ${data.length} atención(es) — registradas por ${[...new Set(data.map(a=>a.usuario))].length} usuario(s)`;
+}
+
+function limpiarConsulta(){
+  document.getElementById('cInpDNI').value='';
+  document.getElementById('cInpNombre').value='';
+  document.getElementById('fichaWrap').style.display='none';
+  document.getElementById('consultaEmpty').style.display='block';
+  document.getElementById('consultaNoEncontrado').style.display='none';
+  fichaAtenciones=[];
+}
+
+
+
+// ════════════════════════════════════════════════════════
+//  SUPABASE CONFIG
+// ════════════════════════════════════════════════════════
+const SUPABASE_URL = "https://gtmoewjbmxkluwpiurpo.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0bW9ld2pibXhrbHV3cGl1cnBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5NzYwNjIsImV4cCI6MjA1NjU1MjA2Mn0.8K9mP2xQvN4rL6wE1tY3uA5sD7fH0jB8cM3nV9pR2kW";
+
+async function sbFetch(path, options = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': options.prefer || 'return=representation',
+    ...options.headers
+  };
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Supabase error: ${res.status} - ${err}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+// GUARDAR atención en Supabase
+async function guardarEnSupabase(atencion) {
+  const row = {
+    fecha: atencion.fecha || null,
+    hora_inicio: atencion.horaInicio || null,
+    hora_fin: atencion.horaFin || null,
+    semana: atencion.semana || null,
+    mes: atencion.mes || null,
+    anio: atencion.anio || null,
+    dni: atencion.dni || null,
+    nombre: atencion.nombre || null,
+    sexo: atencion.sexo || null,
+    fecha_inicio_periodo: atencion.fechaInicioPeriodo || null,
+    empresa: atencion.empresa || null,
+    fundo: atencion.fundo || null,
+    cargo: atencion.cargo || null,
+    ruta: atencion.ruta || null,
+    cod: atencion.cod || null,
+    fundo_actual: atencion.fundoActual || null,
+    celular: atencion.celular || null,
+    supervisor: atencion.supervisor || null,
+    tipo_doc: atencion.tipoDoc || null,
+    fecha_inicio_doc: atencion.fechaInicioDoc || null,
+    fecha_term_doc: atencion.fechaTermDoc || null,
+    dias: atencion.dias || null,
+    resp_recepcion: atencion.respRecepcion || null,
+    obs: atencion.obs || null,
+    estado: atencion.estado || 'ACTIVO',
+    usuario: atencion.usuario || null,
+    usuario_original: atencion.usuarioOriginal || null,
+    importado: atencion.importado || false
+  };
+  // Limpiar nulls de fechas vacías
+  if (!row.fecha) delete row.fecha;
+  if (!row.fecha_inicio_periodo) delete row.fecha_inicio_periodo;
+  if (!row.fecha_inicio_doc) delete row.fecha_inicio_doc;
+  if (!row.fecha_term_doc) delete row.fecha_term_doc;
+
+  const data = await sbFetch('atenciones', {
+    method: 'POST',
+    body: JSON.stringify(row)
+  });
+  return data[0];
+}
+
+// CARGAR atenciones desde Supabase al iniciar
+async function cargarAtencionesSB() {
+  try {
+    showToast('⏳ Cargando datos desde Supabase...', 'info', 3000);
+    // Cargar por bloques de 1000 (límite Supabase)
+    let todas = [];
+    let offset = 0;
+    const limite = 1000;
+    while(true) {
+      const bloque = await sbFetch(`atenciones?select=*&order=fecha.desc&limit=${limite}&offset=${offset}`, {
+        headers: { 'Range-Unit': 'items' }
+      });
+      if (!bloque || bloque.length === 0) break;
+      todas = todas.concat(bloque);
+      if (bloque.length < limite) break;
+      offset += limite;
+    }
+    // Mapear columnas BD → formato sistema
+    ATENCIONES = todas.map(r => ({
+      id: r.id,
+      fecha: r.fecha || '',
+      horaInicio: r.hora_inicio || '',
+      horaFin: r.hora_fin || '',
+      semana: r.semana || 0,
+      mes: r.mes || '',
+      anio: r.anio || 0,
+      dni: r.dni || '',
+      nombre: r.nombre || '',
+      sexo: r.sexo || '',
+      fechaInicioPeriodo: r.fecha_inicio_periodo || '',
+      empresa: r.empresa || '',
+      fundo: r.fundo || '',
+      cargo: r.cargo || '',
+      ruta: r.ruta || '',
+      cod: r.cod || '',
+      fundoActual: r.fundo_actual || '',
+      celular: r.celular || '',
+      supervisor: r.supervisor || '',
+      tipoDoc: r.tipo_doc || '',
+      fechaInicioDoc: r.fecha_inicio_doc || '',
+      fechaTermDoc: r.fecha_term_doc || '',
+      dias: r.dias || '',
+      respRecepcion: r.resp_recepcion || '',
+      obs: r.obs || '',
+      estado: r.estado || 'ACTIVO',
+      usuario: r.usuario || '',
+      usuarioOriginal: r.usuario_original || '',
+      importado: r.importado || false
+    }));
+    showToast(`✅ ${ATENCIONES.length.toLocaleString()} registros cargados desde Supabase`, 'success', 4000);
+    renderDashboard();
+    filtrarHistorial();
+  } catch(e) {
+    console.error('Error cargando Supabase:', e);
+    showToast('⚠️ Sin conexión a Supabase — usando datos locales', 'warn', 5000);
+  }
+}
+
+// IMPORTAR MASIVO a Supabase (por lotes de 500)
+async function importarLoteSupabase(registros) {
+  const LOTE = 500;
+  let insertados = 0;
+  for(let i = 0; i < registros.length; i += LOTE) {
+    const lote = registros.slice(i, i + LOTE).map(a => ({
+      fecha: a.fecha || null,
+      hora_inicio: a.horaInicio || null,
+      hora_fin: a.horaFin || null,
+      semana: a.semana || null,
+      mes: a.mes || null,
+      anio: a.anio || null,
+      dni: a.dni || null,
+      nombre: a.nombre || null,
+      sexo: a.sexo || null,
+      fecha_inicio_periodo: a.fechaInicioPeriodo || null,
+      empresa: a.empresa || null,
+      fundo: a.fundo || null,
+      cargo: a.cargo || null,
+      ruta: a.ruta || null,
+      cod: a.cod || null,
+      fundo_actual: a.fundoActual || null,
+      celular: a.celular || null,
+      supervisor: a.supervisor || null,
+      tipo_doc: a.tipoDoc || null,
+      fecha_inicio_doc: a.fechaInicioDoc || null,
+      fecha_term_doc: a.fechaTermDoc || null,
+      dias: a.dias || null,
+      resp_recepcion: a.respRecepcion || null,
+      obs: a.obs || null,
+      estado: a.estado || 'IMPORTADO',
+      usuario: a.usuario || null,
+      usuario_original: a.usuarioOriginal || null,
+      importado: true
+    })).map(r => {
+      // Limpiar fechas vacías
+      if (!r.fecha) delete r.fecha;
+      if (!r.fecha_inicio_periodo) delete r.fecha_inicio_periodo;
+      if (!r.fecha_inicio_doc) delete r.fecha_inicio_doc;
+      if (!r.fecha_term_doc) delete r.fecha_term_doc;
+      return r;
+    });
+
+    await sbFetch('atenciones', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(lote)
+    });
+    insertados += lote.length;
+    const pct = Math.round((insertados / registros.length) * 100);
+    mostrarProgreso(`Guardando en Supabase... ${insertados.toLocaleString()} de ${registros.length.toLocaleString()}`, pct);
+  }
+  return insertados;
+}
+
+// ELIMINAR registro de Supabase
+async function eliminarDeSB(id) {
+  await sbFetch(`atenciones?id=eq.${id}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal'
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  MÓDULO IMPORTACIÓN HISTÓRICA
+// ════════════════════════════════════════════════════════
+
+const MAPA_USUARIOS_IMPORT = {
+  'fabian zapata'                    : 'fzapata',
+  'alexander martinez'               : 'almartinez',
+  'alex tineo'                       : 'atineo',
+  'elberth castro'                   : 'ecastro',
+  'elberth castro '                  : 'ecastro',
+  'pool tamayo'                      : 'ptamayo',
+  'sergio viera'                     : 'sviera',
+  'flor pulache'                     : 'fpulache',
+  'socorro miranda'                  : 'smiranda',
+  'yhanelly luzon'                   : 'yluzon',
+  'marcos ypanaque'                  : 'mypanaque',
+  'roberto molero'                   : 'rmolero',
+  'roberto molero '                  : 'rmolero',
+  'juan gutierrez'                   : 'jgutierrez',
+  'john hernandez borrero'           : 'jhernandez',
+  'jhonny duberly avendaño granda'   : 'jhernandez',
+  'joel timoteo'                     : 'jtimoteo',
+  'deysi marisol quispe juarez'      : 'sin_usuario',
+  'wilberto adanaque aquino'         : 'sin_usuario',
+  'jaime siancas'                    : 'sin_usuario',
+};
+
+function mapearUsuarioImport(nombreOrig) {
+  if (!nombreOrig) return 'sin_usuario';
+  const key = nombreOrig.toLowerCase().trim();
+  for (const [patron, usuario] of Object.entries(MAPA_USUARIOS_IMPORT)) {
+    if (key.includes(patron) || patron.includes(key)) return usuario;
+  }
+  return 'sin_usuario';
+}
+
+let datosImportados = [];
+let archivoListo = false;
+let datosArchivo = [];
+
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').style.borderColor = 'rgba(0,201,255,0.3)';
+  document.getElementById('dropZone').style.background = 'rgba(0,201,255,0.03)';
+  const file = e.dataTransfer.files[0];
+  if (file) procesarArchivoImport(file);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) procesarArchivoImport(file);
+}
+
+function procesarArchivoImport(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  
+  if (ext === 'csv') {
+    leerCSV(file);
+  } else {
+    // Para xlsx/xlsm usar SheetJS
+    const script = document.createElement('script');
+    script.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+    script.onload = () => leerExcel(file);
+    document.head.appendChild(script);
+    mostrarProgreso('Cargando librería Excel…', 10);
+  }
+}
+
+function leerCSV(file) {
+  mostrarProgreso('Leyendo CSV…', 20);
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const lines = text.split('\n');
+    const headers = lines[0].split(';').map(h => h.trim().replace(/"/g,''));
+    
+    datosArchivo = [];
+    for (let i = 1; i < lines.length; i++) {
+      const vals = lines[i].split(';');
+      if (!vals[1]) continue;
+      const row = {};
+      headers.forEach((h, idx) => row[h] = (vals[idx]||'').trim().replace(/"/g,''));
+      datosArchivo.push(convertirFilaCSV(row, i));
+      if (i % 1000 === 0) mostrarProgreso(`Procesando fila ${i} de ${lines.length}…`, Math.min(90, 20 + (i/lines.length)*70));
+    }
+    finalizarCarga();
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+function leerExcel(file) {
+  mostrarProgreso('Leyendo Excel…', 20);
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      mostrarProgreso('Procesando hojas…', 40);
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      
+      // Buscar hoja correcta
+      const nombreHoja = wb.SheetNames.find(n => n.toLowerCase().includes('atenciones')) || wb.SheetNames[0];
+      mostrarProgreso(`Leyendo hoja: ${nombreHoja}…`, 60);
+      
+      const ws = wb.Sheets[nombreHoja];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false, dateNF: 'yyyy-mm-dd' });
+      
+      datosArchivo = [];
+      rows.forEach((row, i) => {
+        const reg = convertirFilaExcel(row, i+1);
+        if (reg) datosArchivo.push(reg);
+      });
+      
+      finalizarCarga();
+    } catch(err) {
+      mostrarError('Error leyendo Excel: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function convertirFilaExcel(row, idx) {
+  const fecha = row['FECHADEATENCION'] || row['fecha'] || '';
+  if (!fecha) return null;
+  
+  const fechaStr = fecha.length > 10 ? fecha.substring(0,10) : fecha;
+  const usuarioOrig = row['USUARIO'] || row['usuario'] || '';
+  
+  return {
+    id: Date.now() + idx,
+    fecha: fechaStr,
+    horaInicio: (row['HORA_DE_ATENCION']||'').substring(0,5),
+    horaFin: (row['TERMINODEATENCION']||'').substring(0,5),
+    semana: parseInt(row['N_DE_SEMANA'])||0,
+    mes: row['MES']||'',
+    anio: parseInt(row['ANIO'])||0,
+    dni: String(row['INGRESARDNIDELTRABAJADOR']||'').replace("'",""),
+    nombre: row['NOMBRESYAPELLIDOS']||'',
+    sexo: row['SEXO']||'',
+    fechaInicioPeriodo: (row['FECHAINICIODEPERIODO']||'').substring(0,10),
+    empresa: row['EMPRESA']||'',
+    fundo: row['FUNDO']||'',
+    cargo: row['CARGO']||'',
+    ruta: row['INGRESERUTA']||'',
+    cod: String(row['INGRESECOD']||''),
+    fundoActual: row['FUNDO_ACTUAL']||'',
+    celular: String(row['CELULAR']||''),
+    supervisor: row['SUP_RESPONSABLE']||'',
+    tipoDoc: row['DETALLE_DOCUMENTO']||'',
+    fechaInicioDoc: (row['FECHA_INICIO']||'').substring(0,10),
+    fechaTermDoc: (row['FECHA_TERMINO']||'').substring(0,10),
+    dias: String(row['CANTIDAD_DIAS']||''),
+    respRecepcion: row['RESPONSABLE_RECEPCIONAR_DOCUMENTO']||'',
+    obs: row['OBS']||'',
+    estado: row['ESTADO']||'IMPORTADO',
+    usuarioOriginal: usuarioOrig,
+    usuario: mapearUsuarioImport(usuarioOrig),
+    importado: true
+  };
+}
+
+function convertirFilaCSV(row, idx) {
+  return convertirFilaExcel(row, idx);
+}
+
+function finalizarCarga() {
+  archivoListo = true;
+  mostrarProgreso(`✅ Archivo procesado: ${datosArchivo.length.toLocaleString()} registros detectados`, 100);
+  
+  setTimeout(() => {
+    document.getElementById('importProgress').style.display = 'none';
+    document.getElementById('importResultado').style.display = 'block';
+    document.getElementById('importResMsg').textContent = `✅ ${datosArchivo.length.toLocaleString()} registros listos para importar`;
+    
+    // Contar por año
+    const porAnio = {};
+    datosArchivo.forEach(r => { porAnio[r.anio] = (porAnio[r.anio]||0)+1; });
+    const detalle = Object.entries(porAnio).sort((a,b)=>a[0]-b[0])
+      .map(([a,c]) => `${a}: ${c.toLocaleString()}`).join('  ·  ');
+    document.getElementById('importResDet').textContent = 'Por año: ' + detalle;
+    
+    document.getElementById('btnImportar').disabled = false;
+    document.getElementById('dropZone').innerHTML = `
+      <div style="font-size:2rem;margin-bottom:8px;">✅</div>
+      <div style="color:var(--accent2);font-weight:600;">${datosArchivo.length.toLocaleString()} registros cargados</div>
+      <div style="color:var(--gray);font-size:0.8rem;margin-top:4px;">Archivo listo para importar</div>`;
+  }, 800);
+}
+
+function mostrarProgreso(msg, pct) {
+  document.getElementById('importProgress').style.display = 'block';
+  document.getElementById('importMsg').textContent = msg;
+  document.getElementById('importPct').textContent = Math.round(pct) + '%';
+  document.getElementById('importBar').style.width = pct + '%';
+}
+
+function mostrarError(msg) {
+  document.getElementById('importMsg').textContent = '❌ ' + msg;
+  document.getElementById('importPct').textContent = '';
+  document.getElementById('importBar').style.background = 'var(--danger)';
+}
+
+function ejecutarImportacion() {
+  if (!archivoListo || datosArchivo.length === 0) {
+    showToast('Primero sube un archivo Excel', 'error'); return;
+  }
+
+  const modo = document.querySelector('input[name="importMode"]:checked').value;
+  let aImportar = [...datosArchivo];
+
+  if (modo === 'anio') {
+    const anio = parseInt(document.getElementById('selectAnioImport').value);
+    aImportar = datosArchivo.filter(r => r.anio === anio);
+  } else if (modo === 'usuario') {
+    const usuario = document.getElementById('selectUsuarioImport').value;
+    aImportar = datosArchivo.filter(r => r.usuario === usuario);
+  }
+
+  if (aImportar.length === 0) {
+    showToast('No hay registros con ese criterio', 'error'); return;
+  }
+
+  // Evitar duplicados por fecha+dni
+  const existentes = new Set(ATENCIONES.map(a => `${a.fecha}_${a.dni}`));
+  const nuevos = aImportar.filter(r => !existentes.has(`${r.fecha}_${r.dni}`));
+  const duplicados = aImportar.length - nuevos.length;
+
+  // Agregar al array principal
+  nuevos.forEach((r, i) => { r.id = ATENCIONES.length + i + 1; });
+  ATENCIONES.push(...nuevos);
+  datosImportados.push(...nuevos);
+
+  // Actualizar contador
+  document.getElementById('statImportados').textContent = datosImportados.length.toLocaleString();
+
+  // Subir a Supabase en paralelo
+  importarLoteSupabase(nuevos).then(n => {
+    showToast(`☁️ ${n.toLocaleString()} registros guardados en Supabase`, 'success', 5000);
+  }).catch(e => console.warn('Error subiendo a Supabase:', e));
+  showToast(`✅ ${nuevos.toLocaleString ? nuevos.length.toLocaleString() : nuevos.length} registros importados${duplicados > 0 ? ` (${duplicados} duplicados omitidos)` : ''}`, 'success', 6000);
+  
+  document.getElementById('btnLimpiarImport').style.display = '';
+  renderDashboard();
+
+  document.getElementById('importResultado').style.display = 'block';
+  document.getElementById('importResultado').style.borderColor = 'rgba(14,240,160,0.4)';
+  document.getElementById('importResMsg').textContent = `✅ ${nuevos.length.toLocaleString()} registros importados al sistema`;
+  document.getElementById('importResDet').textContent = `${duplicados > 0 ? duplicados + ' duplicados omitidos. ' : ''}Total en sistema: ${ATENCIONES.length.toLocaleString()} registros.`;
+}
+
+function limpiarImportacion() {
+  if (!confirm('¿Eliminar todos los registros importados? Los registros nuevos del sistema NO se borran.')) return;
+  const importIds = new Set(datosImportados.map(r => r.id));
+  ATENCIONES = ATENCIONES.filter(a => !importIds.has(a.id));
+  datosImportados = [];
+  document.getElementById('statImportados').textContent = '0';
+  document.getElementById('btnLimpiarImport').style.display = 'none';
+  renderDashboard();
+  showToast('🗑 Datos importados eliminados del sistema', 'success');
+}
+
+function calcularAnianza(inicio){
+  if(!inicio) return '—';
+  const d=new Date(inicio), h=new Date();
+  const anios=h.getFullYear()-d.getFullYear();
+  return `${anios} año(s) — desde ${formatFecha(inicio)}`;
+}
+function formatFecha(f){
+  if(!f) return '—';
+  const [y,m,d]=f.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function showToast(msg, type='success', duration=3500){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className=`toast ${type} show`;
+  setTimeout(()=>{ t.className=`toast ${type}`; },duration);
+}
+</script>
+
+<!-- ══════════════════════════════════════ MODAL CORREO OUTLOOK ══════════════════════════════════════ -->
+<div id="modalCorreo" style="display:none;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);">
+  <div style="background:linear-gradient(145deg,#0d1452,#0a0f3d);border:1px solid rgba(0,120,212,0.4);border-radius:20px;padding:36px;width:100%;max-width:520px;box-shadow:0 40px 80px rgba(0,0,0,0.5);animation:slideUp 0.35s ease;">
+    
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#0078d4,#106ebe);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">📧</div>
+      <div>
+        <div style="font-size:1.15rem;font-weight:700;">Enviar Reporte a Outlook</div>
+        <div style="color:var(--gray);font-size:0.82rem;margin-top:2px;">Se abrirá Outlook con el mensaje listo para enviar</div>
+      </div>
+      <button onclick="cerrarModalCorreo()" style="margin-left:auto;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;color:var(--gray);font-size:1rem;padding:6px 12px;cursor:pointer;">✕</button>
+    </div>
+
+    <!-- Período -->
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px;">
+      <div style="color:var(--gray);font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">📅 Período del Reporte</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label>Fecha Inicio</label>
+          <input type="date" id="correoDesde" style="padding:10px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:Outfit,sans-serif;font-size:0.9rem;outline:none;width:100%;">
+        </div>
+        <div class="form-group">
+          <label>Fecha Fin</label>
+          <input type="date" id="correoHasta" style="padding:10px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:Outfit,sans-serif;font-size:0.9rem;outline:none;width:100%;">
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label style="color:var(--gray);font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Alcance</label>
+        <select id="correoAlcance" style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:Outfit,sans-serif;font-size:0.9rem;outline:none;">
+          <option value="mis">Solo mis registros</option>
+          <option value="todos">Todos los registros del sistema</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div id="correoPreview" style="display:none;background:rgba(255,255,255,0.04);border:1px solid rgba(0,120,212,0.25);border-radius:14px;padding:16px;margin-bottom:20px;font-size:0.82rem;">
+      <div style="color:var(--gray);font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">👁 Vista previa del resumen</div>
+      <div id="correoPreviewTabla"></div>
+    </div>
+
+    <!-- Botones -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <button onclick="previewCorreo()" class="btn btn-secondary" style="flex:1;">👁 Vista previa</button>
+      <button onclick="generarCorreoOutlook()" class="btn" style="flex:2;background:linear-gradient(135deg,#0078d4,#106ebe);color:#fff;box-shadow:0 6px 20px rgba(0,120,212,0.3);">
+        ✉️ Abrir en Outlook
+      </button>
+    </div>
+
+    <div style="margin-top:14px;padding:10px 14px;background:rgba(14,240,160,0.06);border:1px solid rgba(14,240,160,0.15);border-radius:10px;font-size:0.78rem;color:var(--gray);">
+      💡 Se abrirá Outlook con el correo completo. Solo agrega los destinatarios y presiona Enviar.
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ════════════════════════════════════════════════════════
+//  MÓDULO CORREO OUTLOOK
+// ════════════════════════════════════════════════════════
+
+function abrirModalCorreo(){
+  const modal = document.getElementById('modalCorreo');
+  modal.style.display='flex';
+  // Defaults: hoy
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('correoDesde').value = hoy;
+  document.getElementById('correoHasta').value = hoy;
+  document.getElementById('correoPreview').style.display='none';
+  // Solo admin ve "todos los registros"
+  const alcance = document.getElementById('correoAlcance');
+  if(!session?.admin){
+    alcance.querySelector('option[value="todos"]').style.display='none';
+    alcance.value='mis';
+  } else {
+    alcance.querySelector('option[value="todos"]').style.display='';
+  }
+}
+
+function cerrarModalCorreo(){
+  document.getElementById('modalCorreo').style.display='none';
+}
+
+function getDataCorreo(){
+  const desde = document.getElementById('correoDesde').value;
+  const hasta = document.getElementById('correoHasta').value;
+  const alcance = document.getElementById('correoAlcance').value;
+  if(!desde || !hasta){ showToast('Selecciona fecha inicio y fin','error'); return null; }
+  if(desde > hasta){ showToast('La fecha inicio no puede ser mayor a la fecha fin','error'); return null; }
+
+  let base = alcance==='todos' ? ATENCIONES : ATENCIONES.filter(a=>a.usuario===session.usuario);
+  let data = base.filter(a => a.fecha >= desde && a.fecha <= hasta);
+  return { data, desde, hasta };
+}
+
+function previewCorreo(){
+  const r = getDataCorreo();
+  if(!r) return;
+  const { data, desde, hasta } = r;
+
+  if(data.length===0){
+    document.getElementById('correoPreview').style.display='block';
+    document.getElementById('correoPreviewTabla').innerHTML='<div style="color:var(--warn);text-align:center;padding:12px;">Sin registros en ese período</div>';
+    return;
+  }
+
+  const resumen = construirResumen(data);
+  document.getElementById('correoPreviewTabla').innerHTML = resumenHtmlPreview(resumen, data.length);
+  document.getElementById('correoPreview').style.display='block';
+}
+
+function construirResumen(data){
+  // Agrupa por Empresa > Resp.Recepción > TipoDoc → suma total
+  const mapa = {};
+  data.forEach(a=>{
+    const emp = a.empresa||'—';
+    const resp = a.respRecepcion||'—';
+    const tipo = a.tipoDoc||'—';
+    if(!mapa[emp]) mapa[emp]={};
+    if(!mapa[emp][resp]) mapa[emp][resp]={};
+    mapa[emp][resp][tipo] = (mapa[emp][resp][tipo]||0)+1;
+  });
+  return mapa;
+}
+
+function resumenHtmlPreview(resumen, totalGral){
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+    <thead>
+      <tr style="background:rgba(0,120,212,0.2);">
+        <th style="padding:6px 10px;text-align:left;border:1px solid rgba(255,255,255,0.08);color:var(--gray);">EMPRESA</th>
+        <th style="padding:6px 10px;text-align:left;border:1px solid rgba(255,255,255,0.08);color:var(--gray);">RESPONSABLE DE RECEPCIONAR</th>
+        <th style="padding:6px 10px;text-align:left;border:1px solid rgba(255,255,255,0.08);color:var(--gray);">DETALLE DEL DOCUMENTO</th>
+        <th style="padding:6px 10px;text-align:center;border:1px solid rgba(255,255,255,0.08);color:var(--gray);">TOTAL</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  let totalGeneral=0;
+  Object.entries(resumen).forEach(([emp, resps])=>{
+    let totalEmp=0;
+    Object.entries(resps).forEach(([resp, tipos])=>{
+      let totalResp=0;
+      Object.entries(tipos).forEach(([tipo, cnt])=>{
+        html+=`<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+          <td style="padding:5px 10px;border:1px solid rgba(255,255,255,0.06);">${emp}</td>
+          <td style="padding:5px 10px;border:1px solid rgba(255,255,255,0.06);">${resp}</td>
+          <td style="padding:5px 10px;border:1px solid rgba(255,255,255,0.06);">${tipo}</td>
+          <td style="padding:5px 10px;text-align:center;border:1px solid rgba(255,255,255,0.06);">${cnt}</td>
+        </tr>`;
+        totalResp+=cnt; totalEmp+=cnt; totalGeneral+=cnt;
+      });
+      html+=`<tr style="background:rgba(255,255,255,0.05);font-weight:700;">
+        <td colspan="3" style="padding:5px 10px;border:1px solid rgba(255,255,255,0.08);color:var(--accent2);">Total ${resp}</td>
+        <td style="padding:5px 10px;text-align:center;border:1px solid rgba(255,255,255,0.08);color:var(--accent2);">${totalResp}</td>
+      </tr>`;
+    });
+    html+=`<tr style="background:rgba(0,201,255,0.08);font-weight:700;">
+      <td colspan="3" style="padding:5px 10px;border:1px solid rgba(255,255,255,0.1);color:var(--accent);">Total ${emp}</td>
+      <td style="padding:5px 10px;text-align:center;border:1px solid rgba(255,255,255,0.1);color:var(--accent);">${totalEmp}</td>
+    </tr>`;
+  });
+
+  html+=`<tr style="background:rgba(0,120,212,0.25);font-weight:800;">
+    <td colspan="3" style="padding:6px 10px;border:1px solid rgba(255,255,255,0.12);color:#60cdff;">Total general</td>
+    <td style="padding:6px 10px;text-align:center;border:1px solid rgba(255,255,255,0.12);color:#60cdff;">${totalGeneral}</td>
+  </tr>`;
+  html+=`</tbody></table>`;
+  return html;
+}
+
+function resumenHtmlCorreo(resumen){
+  // HTML limpio para el cuerpo del correo (fondo blanco)
+  let html = `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;width:100%;max-width:700px;">
+    <thead>
+      <tr style="background-color:#1F497D;color:#ffffff;">
+        <th style="padding:8px 12px;text-align:left;border:1px solid #bbb;">EMPRESA</th>
+        <th style="padding:8px 12px;text-align:left;border:1px solid #bbb;">RESPONSABLE DE RECEPCIONAR DOCUMENTO</th>
+        <th style="padding:8px 12px;text-align:left;border:1px solid #bbb;">DETALLE DEL DOCUMENTO</th>
+        <th style="padding:8px 12px;text-align:center;border:1px solid #bbb;">Total</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  let totalGeneral=0;
+  Object.entries(resumen).forEach(([emp, resps])=>{
+    let totalEmp=0;
+    Object.entries(resps).forEach(([resp, tipos])=>{
+      let totalResp=0;
+      Object.entries(tipos).forEach(([tipo, cnt])=>{
+        html+=`<tr>
+          <td style="padding:6px 12px;border:1px solid #ddd;">${emp}</td>
+          <td style="padding:6px 12px;border:1px solid #ddd;">${resp}</td>
+          <td style="padding:6px 12px;border:1px solid #ddd;">${tipo}</td>
+          <td style="padding:6px 12px;text-align:center;border:1px solid #ddd;">${cnt}</td>
+        </tr>`;
+        totalResp+=cnt; totalEmp+=cnt; totalGeneral+=cnt;
+      });
+      html+=`<tr style="background-color:#f5f5f5;font-weight:bold;">
+        <td colspan="3" style="padding:6px 12px;border:1px solid #ccc;">Total ${resp}</td>
+        <td style="padding:6px 12px;text-align:center;border:1px solid #ccc;">${totalResp}</td>
+      </tr>`;
+    });
+    html+=`<tr style="background-color:#dce6f1;font-weight:bold;">
+      <td colspan="3" style="padding:6px 12px;border:1px solid #bbb;">Total ${emp}</td>
+      <td style="padding:6px 12px;text-align:center;border:1px solid #bbb;">${totalEmp}</td>
+    </tr>`;
+  });
+
+  html+=`<tr style="background-color:#B7DDE8;font-weight:bold;text-align:center;">
+    <td colspan="3" style="padding:7px 12px;border:1px solid #aaa;">Total general</td>
+    <td style="padding:7px 12px;text-align:center;border:1px solid #aaa;">${totalGeneral}</td>
+  </tr>`;
+  html+=`</tbody></table>`;
+  return html;
+}
+
+function generarCorreoOutlook(){
+  const r = getDataCorreo();
+  if(!r) return;
+  const { data, desde, hasta } = r;
+
+  if(data.length===0){
+    showToast('No hay registros en ese período para enviar','error'); return;
+  }
+
+  const desdeStr = formatFecha(desde);
+  const hastaStr = formatFecha(hasta);
+  const resumen = construirResumen(data);
+  const tablaHtml = resumenHtmlCorreo(resumen);
+
+  // Hora del día para saludo
+  const hora = new Date().getHours();
+  const saludo = hora<12?'buenos días':hora<18?'buenas tardes':'buenas noches';
+
+  // Construir cuerpo HTML completo
+  const cuerpo = `
+<html>
+<body style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a2e;line-height:1.6;">
+
+<p>Estimados,</p>
+
+<p>Reciban un cordial saludo, ${saludo}.</p>
+
+<p>El presente correo es para comunicarles sobre la documentación recepcionada durante el período comprendido entre el <strong>${desdeStr}</strong> y el <strong>${hastaStr}</strong>.</p>
+
+<p>Se adjunta el archivo Excel con el detalle completo de los registros. Asimismo, se presenta a continuación la tabla resumen:</p>
+
+<br>
+<p><strong>Resumen General</strong></p>
+${tablaHtml}
+<br>
+
+<p>Por favor confirmar la recepción de los documentos adjuntos.</p>
+
+<p>Quedo atento(a) a cualquier consulta o coordinación adicional.</p>
+
+<br>
+<p>Saludos cordiales,</p>
+<p><strong>${session.nombre}</strong><br>
+${session.cargo}<br>
+Gestión Humana — Verfrut / Rapel</p>
+
+</body>
+</html>`;
+
+  // También construir texto plano para el subject
+  const asunto = `Reporte de Atenciones Diarias — ${desdeStr} al ${hastaStr}`;
+
+  // Método 1: mailto con body plano (Outlook lo acepta)
+  // Construir resumen texto plano para mailto
+  let textoResumen = '\n\nRESUMEN GENERAL:\n';
+  textoResumen += 'EMPRESA | RESPONSABLE | DOCUMENTO | TOTAL\n';
+  textoResumen += '─'.repeat(60)+'\n';
+  let totalG=0;
+  Object.entries(resumen).forEach(([emp,resps])=>{
+    let tEmp=0;
+    Object.entries(resps).forEach(([resp,tipos])=>{
+      Object.entries(tipos).forEach(([tipo,cnt])=>{
+        textoResumen+=`${emp} | ${resp} | ${tipo} | ${cnt}\n`;
+        tEmp+=cnt; totalG+=cnt;
+      });
+    });
+    textoResumen+=`Total ${emp}: ${tEmp}\n`;
+  });
+  textoResumen+=`TOTAL GENERAL: ${totalG}\n`;
+
+  const bodyPlano = `Estimados,%0D%0A%0D%0AReciban un cordial saludo, ${saludo}.%0D%0A%0D%0AEl presente correo es para comunicarles sobre la documentación recepcionada durante el período comprendido entre el ${desdeStr} y el ${hastaStr}.%0D%0A%0D%0ASe adjunta el archivo Excel con el detalle completo. Asimismo, a continuación la tabla resumen:${encodeURIComponent(textoResumen)}%0D%0APor favor confirmar la recepción de los documentos.%0D%0A%0D%0AQuedo atento(a) a cualquier consulta.%0D%0A%0D%0ASaludos cordiales,%0D%0A${session.nombre}%0D%0A${session.cargo}%0D%0AGestión Humana — Verfrut / Rapel`;
+
+  // Generar CSV/Excel para descargar
+  generarExcelReporte(data, desdeStr, hastaStr);
+
+  // Abrir Outlook
+  const mailtoLink = `mailto:?subject=${encodeURIComponent(asunto)}&body=${bodyPlano}`;
+  window.location.href = mailtoLink;
+
+  cerrarModalCorreo();
+  showToast('✅ Outlook abierto — Excel descargado. Solo agrega destinatarios y envía.', 'success', 6000);
+}
+
+function generarExcelReporte(data, desdeStr, hastaStr){
+  // Generar CSV descargable (abre en Excel)
+  const headers = ['N°','Fecha','Hora','Semana','Mes','Año','DNI','Nombre','Sexo','Empresa','Fundo','Cargo','Supervisor','Tipo Documento','F.Inicio Doc','F.Término Doc','Días','Resp. Recepción','Observaciones','Estado','Registrado por'];
+  
+  let csv = headers.join(';') + '\n';
+  data.forEach((a,i)=>{
+    csv += [
+      i+1, a.fecha, a.horaInicio, a.semana, a.mes, a.anio,
+      `'${a.dni}`, a.nombre, a.sexo, a.empresa, a.fundo, a.cargo,
+      a.supervisor, a.tipoDoc, a.fechaInicioDoc, a.fechaTermDoc,
+      a.dias, a.respRecepcion, (a.obs||'').replace(/;/g,' '), a.estado, a.usuario
+    ].join(';') + '\n';
+  });
+
+  // BOM para Excel reconozca UTF-8
+  const bom = '\uFEFF';
+  const blob = new Blob([bom+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const fecha = new Date().toISOString().replace(/[:T]/g,'-').substring(0,16).replace(/-/g,'');
+  a.download = `Reporte_Atenciones_${fecha}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Cerrar modal al hacer click fuera
+document.getElementById('modalCorreo').addEventListener('click', function(e){
+  if(e.target===this) cerrarModalCorreo();
+});
+
+</script>
+</body>
+</html>
